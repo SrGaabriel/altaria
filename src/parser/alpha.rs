@@ -1,17 +1,24 @@
-use std::collections::HashMap;
-use std::io::{Bytes, Cursor, Read};
 use crate::parser::{HttpParser, HttpParserError};
 use crate::request::{HttpHeader, HttpHeaderMap, HttpMethod, HttpRequest};
+use std::collections::HashMap;
+use async_trait::async_trait;
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
+use tokio::net::TcpStream;
 
 pub struct AlphaHttpParser {
 
 }
 
 impl AlphaHttpParser {
-    fn parse_request_line(&self, line: &str) -> Result<HttpMethod, HttpParserError> {
+    async fn parse_request_line(&self, mut reader: &mut BufReader<&mut TcpStream>) -> Result<HttpMethod, HttpParserError> {
+        let mut line = String::new();
+        let bytes_read = reader.read_line(&mut line).await;
+        if bytes_read.is_err() {
+            return Err(HttpParserError { message: "Failed to read request line".to_string() });
+        }
+
         let bytes = line.as_bytes();
         let mut end = line.len();
-
         for (i, &item) in bytes.iter().enumerate() {
             if item == b' ' {
                 end = i;
@@ -35,56 +42,49 @@ impl AlphaHttpParser {
         Ok(method)
     }
 
-    fn parse_headers(&self, lines: &Vec<&str>) -> Result<HttpHeaderMap, HttpParserError> {
-        // Again, we'll do the most efficient parsing possible
+    async fn parse_headers(&self, reader: &mut BufReader<&mut TcpStream>) -> Result<HttpHeaderMap, HttpParserError> {
         let mut headers = HashMap::new();
-        for line in lines.iter().skip(1) {
-            if line.is_empty() {
+
+        loop {
+            let mut line = String::new();
+            let bytes_read = reader.read_line(&mut line).await;
+            if bytes_read.is_err() {
+                return Err(HttpParserError { message: "Failed to read header line".to_string() });
+            }
+            let bytes_read = bytes_read.unwrap();
+
+            if line.trim().is_empty() || bytes_read == 0 {
                 break;
             }
 
-            let mut end = line.len();
-            for (j, &item) in line.as_bytes().iter().enumerate() {
-                if item == b':' {
-                    end = j;
-                    break;
-                }
+            if let Some((key, value)) = line.split_once(':') {
+                let key = key.trim().to_lowercase();
+                let value = value.trim().to_string();
+                headers.insert(HttpHeader::from_name(&key), value);
             }
-            if end == line.len() {
-                return Err(HttpParserError { message: format!("Invalid header: {}", line) });
-            }
-
-            let header_name = &line[..end];
-            let header_value = &line[end + 2..];
-            let header = HttpHeader::from_name(header_name);
-
-            headers.insert(header, header_value.to_string());
         }
-
         Ok(headers)
     }
 }
 
+#[async_trait]
 impl HttpParser for AlphaHttpParser {
-    fn parse(&self, data: &mut dyn Read) -> Result<HttpRequest, HttpParserError> {
-        let mut buf = [0; 1024];
-        let string = match data.read(&mut buf) {
-            Ok(bytes_read) => {
-                String::from_utf8_lossy(&buf[..bytes_read])
-            }
-            Err(err) => {
-                return Err(HttpParserError { message: format!("Failed to read from stream: {}", err) });
-            }
+    async fn parse(&self, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
+        let mut buffer = BufReader::new(data);
+        let method = self.parse_request_line(&mut buffer).await?;
+        let headers = self.parse_headers(&mut buffer).await?;
+
+        let content_length = headers.get(&HttpHeader::ContentLength);
+
+        let body = if let Some(content_length) = content_length {
+            let content_length = content_length.parse::<usize>().unwrap();
+            let mut limited_reader = buffer.take(content_length as u64);
+            let mut body = Vec::new();
+            limited_reader.read_to_end(&mut body).await.unwrap();
+            body
+        } else {
+            Vec::new()
         };
-
-        let lines = string.lines().collect::<Vec<&str>>();
-        let method = self.parse_request_line(lines[0])?;
-        let headers = self.parse_headers(&lines)?;
-
-        let body = lines.iter().skip(1 + headers.len()).fold(Vec::new(), |mut acc, &line| {
-            acc.extend_from_slice(line.as_bytes());
-            acc
-        });
 
         Ok(HttpRequest {
             method,
