@@ -8,6 +8,10 @@ pub trait HttpResponseFormatter {
 pub struct DefaultHttpResponseFormatter {}
 
 impl DefaultHttpResponseFormatter {
+    pub fn new() -> Self {
+        DefaultHttpResponseFormatter {}
+    }
+
     fn insert_header_if_not_present(&self, key: HttpHeader, value: &str, headers: &mut HttpHeaderMap) {
         if !headers.contains_key(&key) {
             headers.insert(key, value.to_string());
@@ -18,12 +22,13 @@ impl DefaultHttpResponseFormatter {
 impl HttpResponseFormatter for DefaultHttpResponseFormatter {
     fn format(&self, response: HttpResponse) -> HttpResponse {
         let mut headers = response.headers.clone();
+        let now = chrono::Utc::now();
+        let formatted_date = now.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
 
-        self.insert_header_if_not_present(HttpHeader::Date, "Tue, 03 Dec 2024 23:31:56 GMT", &mut headers);
+        self.insert_header_if_not_present(HttpHeader::Date, &formatted_date, &mut headers);
         self.insert_header_if_not_present(HttpHeader::Server, "altaria", &mut headers);
         self.insert_header_if_not_present(HttpHeader::ContentType, "text/plain", &mut headers);
         self.insert_header_if_not_present(HttpHeader::ContentLength, &response.body.len().to_string(), &mut headers);
-        self.insert_header_if_not_present(HttpHeader::Location, "localhost:8080", &mut headers);
 
         HttpResponse {
             status_code: response.status_code,

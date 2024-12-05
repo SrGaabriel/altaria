@@ -1,5 +1,6 @@
 use crate::request::HttpHeaderMap;
 
+#[derive(Debug, Clone)]
 pub struct HttpResponse {
     pub status_code: HttpStatusCode,
     pub headers: HttpHeaderMap,

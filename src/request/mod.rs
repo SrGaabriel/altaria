@@ -2,12 +2,37 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct HttpRequest {
+    pub protocol: HttpProtocol,
+    pub scheme: HttpScheme,
+    pub path: String,
     pub method: HttpMethod,
     pub headers: HttpHeaderMap,
     pub body: Vec<u8>
 }
 
 pub type HttpHeaderMap = HashMap<HttpHeader, String>;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum HttpProtocol {
+    HTTP1 = 1,
+    HTTP2 = 2
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum HttpScheme {
+    HTTP,
+    HTTPS
+}
+
+impl HttpScheme {
+    pub fn from_str(scheme: &str) -> HttpScheme {
+        match scheme {
+            "http" => HttpScheme::HTTP,
+            "https" => HttpScheme::HTTPS,
+            _ => HttpScheme::HTTP
+        }
+    }
+}
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum HttpMethod {
@@ -19,6 +44,22 @@ pub enum HttpMethod {
     HEAD,
     PATCH,
     TRACE
+}
+
+impl HttpMethod {
+    pub fn from_str(method: &str) -> HttpMethod {
+        match method {
+            "GET" => HttpMethod::GET,
+            "POST" => HttpMethod::POST,
+            "PUT" => HttpMethod::PUT,
+            "DELETE" => HttpMethod::DELETE,
+            "OPTIONS" => HttpMethod::OPTIONS,
+            "HEAD" => HttpMethod::HEAD,
+            "PATCH" => HttpMethod::PATCH,
+            "TRACE" => HttpMethod::TRACE,
+            _ => HttpMethod::GET
+        }
+    }
 }
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone)]
@@ -65,7 +106,14 @@ pub enum HttpHeader {
     Upgrade,
     Via,
     Warning,
-    Custom(String)
+    Custom(String),
+
+    PseudoScheme,
+    PseudoMethod,
+    PseudoAuthority,
+    PseudoPath,
+    PseudoStatus,
+    PseudoProtocol
 }
 
 impl HttpHeader {
@@ -113,55 +161,75 @@ impl HttpHeader {
             HttpHeader::Upgrade => "Upgrade".to_string(),
             HttpHeader::Via => "Via".to_string(),
             HttpHeader::Warning => "Warning".to_string(),
-            HttpHeader::Custom(name) => name.to_string()
+            HttpHeader::Custom(name) => name.to_string(),
+
+            HttpHeader::PseudoScheme => ":scheme".to_string(),
+            HttpHeader::PseudoMethod => ":method".to_string(),
+            HttpHeader::PseudoAuthority => ":authority".to_string(),
+            HttpHeader::PseudoPath => ":path".to_string(),
+            HttpHeader::PseudoStatus => ":status".to_string(),
+            HttpHeader::PseudoProtocol => ":protocol".to_string()
         }
     }
 
     pub fn from_name(name: &str) -> HttpHeader {
-        match name {
-            "AIM" => HttpHeader::AIM,
-            "Accept" => HttpHeader::Accept,
-            "Accept-Charset" => HttpHeader::AcceptCharset,
-            "Accept-Datetime" => HttpHeader::AcceptDatetime,
-            "Accept-Encoding" => HttpHeader::AcceptEncoding,
-            "Accept-Language" => HttpHeader::AcceptLanguage,
-            "Access-Control-Request-Method" => HttpHeader::AccessControlRequestMethod,
-            "Authorization" => HttpHeader::Authorization,
-            "Cache-Control" => HttpHeader::CacheControl,
-            "Connection" => HttpHeader::Connection,
-            "Content-Encoding" => HttpHeader::ContentEncoding,
-            "Content-Length" => HttpHeader::ContentLength,
-            "Content-MD5" => HttpHeader::ContentMd5,
-            "Content-Type" => HttpHeader::ContentType,
-            "Cookie" => HttpHeader::Cookie,
-            "Date" => HttpHeader::Date,
-            "Expect" => HttpHeader::Expect,
-            "Forwarded" => HttpHeader::Forwarded,
-            "From" => HttpHeader::From,
-            "Host" => HttpHeader::Host,
-            "HTTP2-Settings" => HttpHeader::Http2Settings,
-            "If-Match" => HttpHeader::IfMatch,
-            "If-Modified-Since" => HttpHeader::IfModifiedSince,
-            "If-None-Match" => HttpHeader::IfNoneMatch,
-            "If-Range" => HttpHeader::IfRange,
-            "If-Unmodified-Since" => HttpHeader::IfUnmodifiedSince,
-            "Location" => HttpHeader::Location,
-            "Max-Forwards" => HttpHeader::MaxForwards,
-            "Origin" => HttpHeader::Origin,
-            "Pragma" => HttpHeader::Pragma,
-            "Prefer" => HttpHeader::Prefer,
-            "Proxy-Authorization" => HttpHeader::ProxyAuthorization,
-            "Range" => HttpHeader::Range,
-            "Referer" => HttpHeader::Referer,
-            "Server" => HttpHeader::Server,
-            "TE" => HttpHeader::Te,
-            "Trailer" => HttpHeader::Trailer,
-            "Transfer-Encoding" => HttpHeader::TransferEncoding,
-            "User-Agent" => HttpHeader::UserAgent,
-            "Upgrade" => HttpHeader::Upgrade,
-            "Via" => HttpHeader::Via,
-            "Warning" => HttpHeader::Warning,
-            _ => HttpHeader::Custom(name.to_string())
+        match name.to_lowercase().as_str() {
+            "aim" => HttpHeader::AIM,
+            "accept" => HttpHeader::Accept,
+            "accept-charset" => HttpHeader::AcceptCharset,
+            "accept-datetime" => HttpHeader::AcceptDatetime,
+            "accept-encoding" => HttpHeader::AcceptEncoding,
+            "accept-language" => HttpHeader::AcceptLanguage,
+            "access-control-request-method" => HttpHeader::AccessControlRequestMethod,
+            "authorization" => HttpHeader::Authorization,
+            "cache-control" => HttpHeader::CacheControl,
+            "connection" => HttpHeader::Connection,
+            "content-encoding" => HttpHeader::ContentEncoding,
+            "content-length" => HttpHeader::ContentLength,
+            "content-md5" => HttpHeader::ContentMd5,
+            "content-type" => HttpHeader::ContentType,
+            "cookie" => HttpHeader::Cookie,
+            "date" => HttpHeader::Date,
+            "expect" => HttpHeader::Expect,
+            "forwarded" => HttpHeader::Forwarded,
+            "from" => HttpHeader::From,
+            "host" => HttpHeader::Host,
+            "http2-settings" => HttpHeader::Http2Settings,
+            "if-match" => HttpHeader::IfMatch,
+            "if-modified-since" => HttpHeader::IfModifiedSince,
+            "if-none-match" => HttpHeader::IfNoneMatch,
+            "if-range" => HttpHeader::IfRange,
+            "if-unmodified-since" => HttpHeader::IfUnmodifiedSince,
+            "location" => HttpHeader::Location,
+            "max-forwards" => HttpHeader::MaxForwards,
+            "origin" => HttpHeader::Origin,
+            "pragma" => HttpHeader::Pragma,
+            "prefer" => HttpHeader::Prefer,
+            "proxy-authorization" => HttpHeader::ProxyAuthorization,
+            "range" => HttpHeader::Range,
+            "referer" => HttpHeader::Referer,
+            "server" => HttpHeader::Server,
+            "te" => HttpHeader::Te,
+            "trailer" => HttpHeader::Trailer,
+            "transfer-encoding" => HttpHeader::TransferEncoding,
+            "user-agent" => HttpHeader::UserAgent,
+            "upgrade" => HttpHeader::Upgrade,
+            "via" => HttpHeader::Via,
+            "warning" => HttpHeader::Warning,
+            ":scheme" => HttpHeader::PseudoScheme,
+            ":method" => HttpHeader::PseudoMethod,
+            ":authority" => HttpHeader::PseudoAuthority,
+            ":path" => HttpHeader::PseudoPath,
+            ":status" => HttpHeader::PseudoStatus,
+            ":protocol" => HttpHeader::PseudoProtocol,
+            _ => HttpHeader::Custom(name.to_string()),
+        }
+    }
+
+    pub fn is_pseudo(&self) -> bool {
+        match self {
+            HttpHeader::PseudoScheme | HttpHeader::PseudoMethod | HttpHeader::PseudoAuthority | HttpHeader::PseudoPath | HttpHeader::PseudoStatus | HttpHeader::PseudoProtocol => true,
+            _ => false
         }
     }
 }

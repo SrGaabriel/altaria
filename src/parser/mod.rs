@@ -1,22 +1,28 @@
 use std::io::Read;
-use async_trait::async_trait;
-use tokio::net::TcpStream;
-use crate::request::HttpRequest;
 
 pub mod alpha;
-
-#[async_trait]
-pub trait HttpParser {
-    async fn parse(&self, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError>;
-}
+pub mod beta;
+mod body;
 
 #[derive(Debug, Clone)]
-pub struct HttpParserError {
-    pub message: String
+pub enum HttpParserError {
+    RequestLine,
+    ConnectionPreface,
+    InvalidFrame,
+    InvalidMethod,
+    InvalidStream,
+    InvalidHeader,
+    InvalidRequestLine,
+    FrameHeader,
+    FramePayload,
+    HeaderLine,
+    UnknownFrameType,
+    HeaderDecoding,
+    RequiredHeaderNotFound,
 }
 
-impl HttpParserError {
-    pub fn new(message: &str) -> HttpParserError {
-        HttpParserError { message: message.to_string() }
+impl From<hpack::decoder::DecoderError> for HttpParserError {
+    fn from(_: hpack::decoder::DecoderError) -> Self {
+        HttpParserError::HeaderDecoding
     }
 }

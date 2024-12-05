@@ -1,32 +1,31 @@
-use crate::parser::{HttpParser, HttpParserError};
-use crate::request::{HttpHeader, HttpHeaderMap, HttpMethod, HttpRequest};
+use crate::parser::HttpParserError;
+use crate::request::{HttpHeader, HttpHeaderMap, HttpMethod, HttpProtocol, HttpRequest, HttpScheme};
 use std::collections::HashMap;
-use async_trait::async_trait;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::net::TcpStream;
+use crate::parser::body::read_body_based_on_headers;
 
 pub struct AlphaHttpParser {
 
 }
 
 impl AlphaHttpParser {
-    async fn parse_request_line(&self, mut reader: &mut BufReader<&mut TcpStream>) -> Result<HttpMethod, HttpParserError> {
+    pub fn new() -> Self {
+        AlphaHttpParser {}
+    }
+
+    async fn parse_request_line(&self, mut reader: &mut BufReader<&mut TcpStream>) -> Result<(HttpMethod, String), HttpParserError> {
         let mut line = String::new();
         let bytes_read = reader.read_line(&mut line).await;
+
         if bytes_read.is_err() {
-            return Err(HttpParserError { message: "Failed to read request line".to_string() });
+            return Err(HttpParserError::RequestLine);
         }
 
-        let bytes = line.as_bytes();
-        let mut end = line.len();
-        for (i, &item) in bytes.iter().enumerate() {
-            if item == b' ' {
-                end = i;
-                break;
-            }
-        }
+        let line_parts = line.split_whitespace().collect::<Vec<&str>>();
+        let method_str = *line_parts.get(0).ok_or(HttpParserError::InvalidRequestLine)?;
+        let path = line_parts.get(1).ok_or(HttpParserError::InvalidRequestLine)?.to_string();
 
-        let method_str = &line[..end];
         let method = match method_str {
             "GET" => HttpMethod::GET,
             "POST" => HttpMethod::POST,
@@ -36,10 +35,10 @@ impl AlphaHttpParser {
             "HEAD" => HttpMethod::HEAD,
             "PATCH" => HttpMethod::PATCH,
             "TRACE" => HttpMethod::TRACE,
-            _ => return Err(HttpParserError { message: format!("Invalid method: {}", method_str) })
+            _ => return Err(HttpParserError::InvalidMethod)
         };
 
-        Ok(method)
+        Ok((method, path))
     }
 
     async fn parse_headers(&self, reader: &mut BufReader<&mut TcpStream>) -> Result<HttpHeaderMap, HttpParserError> {
@@ -49,7 +48,7 @@ impl AlphaHttpParser {
             let mut line = String::new();
             let bytes_read = reader.read_line(&mut line).await;
             if bytes_read.is_err() {
-                return Err(HttpParserError { message: "Failed to read header line".to_string() });
+                return Err(HttpParserError::HeaderLine);
             }
             let bytes_read = bytes_read.unwrap();
 
@@ -65,28 +64,17 @@ impl AlphaHttpParser {
         }
         Ok(headers)
     }
-}
 
-#[async_trait]
-impl HttpParser for AlphaHttpParser {
-    async fn parse(&self, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
-        let mut buffer = BufReader::new(data);
-        let method = self.parse_request_line(&mut buffer).await?;
-        let headers = self.parse_headers(&mut buffer).await?;
-
-        let content_length = headers.get(&HttpHeader::ContentLength);
-
-        let body = if let Some(content_length) = content_length {
-            let content_length = content_length.parse::<usize>().unwrap();
-            let mut limited_reader = buffer.take(content_length as u64);
-            let mut body = Vec::new();
-            limited_reader.read_to_end(&mut body).await.unwrap();
-            body
-        } else {
-            Vec::new()
-        };
+    pub(crate) async fn parse(&self, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
+        let mut reader = BufReader::new(data);
+        let (method, path) = self.parse_request_line(&mut reader).await?;
+        let headers = self.parse_headers(&mut reader).await?;
+        let body = read_body_based_on_headers(&headers, &mut reader).await;
 
         Ok(HttpRequest {
+            protocol: HttpProtocol::HTTP1,
+            path,
+            scheme: HttpScheme::HTTP,
             method,
             headers,
             body
