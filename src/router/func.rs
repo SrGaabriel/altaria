@@ -3,6 +3,7 @@ use std::pin::Pin;
 use async_trait::async_trait;
 use crate::request::HttpRequest;
 use crate::response::HttpResponse;
+use crate::response::into::IntoResponse;
 use crate::router::handler::RouteHandler;
 
 pub struct FunctionRouteHandler {
@@ -12,16 +13,21 @@ pub struct FunctionRouteHandler {
 #[async_trait]
 impl RouteHandler for FunctionRouteHandler {
     async fn handle(&self, request: HttpRequest) -> HttpResponse {
-        let handle = (self.func)(request);
-        handle.await
+        (self.func)(request).await
     }
 }
 
-pub fn function_handler<F, Fut>(callback: F) -> Box<FunctionRouteHandler>
-    where F : Fn(HttpRequest) -> Fut + Send + Sync + 'static,
-        Fut : Future<Output = HttpResponse> + Send + 'static
+pub fn function_handler<F, Fut, R>(callback: F) -> Box<FunctionRouteHandler>
+where F : Fn(HttpRequest) -> Fut + Send + Sync + 'static + Clone,
+      Fut : Future<Output = R> + Send + 'static,
+      R : IntoResponse + Send + 'static
 {
     Box::new(FunctionRouteHandler {
-        func: Box::new(move |request| Box::pin(callback(request)))
+        func: Box::new(move |request| Box::pin({
+            let value = callback.clone();
+            async move {
+                value.clone()(request).await.into_response()
+            }
+        }))
     })
 }

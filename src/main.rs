@@ -13,6 +13,7 @@ use std::io::{Read, Write};
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use crate::response::{HttpResponse, HttpStatusCode};
+use crate::response::into::IntoResponse;
 use crate::router::func::function_handler;
 use crate::router::Router;
 
@@ -45,39 +46,12 @@ impl HttpServer {
 
 #[tokio::main]
 async fn main() {
-    tokio::spawn(async {
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let client = reqwest::Client::builder()
-            .build()
-            .unwrap();
-        let time = std::time::Instant::now();
-        for i in 0..1 {
-            let request_future = client.post("http://localhost:8080/hello")
-                .body("Hello, world!")
-                .send();
-
-            let response = tokio::time::timeout(Duration::from_secs(1), request_future)
-                .await
-                .expect("Request timed out")
-                .expect("Unsuccesful request");
-            println!("Successful request: {:?}", response)
-        }
-        let elapsed = time.elapsed().as_millis();
-        println!("All requests completed in {}ms", elapsed);
-    });
-
     let handler = function_handler(|request| async {
-      HttpResponse {
-          status_code: HttpStatusCode::ImATeapot,
-          headers: headers! {
-              ContentType: ""
-          },
-          body: "Hello, World!".as_bytes().to_vec()
-      }
+        (HttpStatusCode::Unauthorized, "Hello, World!")
     });
 
     let router = router! {
-        "hello" => handler
+        "/hello" => handler
     };
 
     let mut server = HttpServer::http1(router);
@@ -90,4 +64,25 @@ async fn main() {
         .listen()
         .await
         .expect("Failed to start server");
+}
+
+#[tokio::test]
+async fn send_requests() {
+    let client = reqwest::Client::builder()
+        .build()
+        .unwrap();
+    let time = std::time::Instant::now();
+    for i in 0..1 {
+        let request_future = client.post("http://localhost:8080/hello")
+            .body("Hello, World!")
+            .send();
+
+        let response = tokio::time::timeout(Duration::from_secs(1), request_future)
+            .await
+            .expect("Request timed out")
+            .expect("Unsuccesful request");
+        println!("({}) Successful request: {}", response.status(), response.text().await.unwrap())
+    }
+    let elapsed = time.elapsed().as_millis();
+    println!("All requests completed in {}ms", elapsed);
 }
