@@ -11,18 +11,14 @@ async fn main() {
 
     let router = router! {
         "/hello" => handler
-        "/baba/{id}" => handler
+        "/test/{id}" => handler
     };
 
-    let mut server = HttpServer::http1(router);
-    server
-        .bind("localhost:8080")
+    Server::builder()
+        .local_port(8080)
+        .router(router)
+        .start()
         .await
-        .expect("Failed to connect to server");
-
-    server
-        .listen()
-        .await
-        .expect("Failed to start server");
+        .unwrap()
 }
 ```
