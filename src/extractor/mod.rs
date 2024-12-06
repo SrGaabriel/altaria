@@ -1,25 +1,36 @@
-use std::marker::PhantomData;
+use thiserror::Error;
+use crate::request::from::FromRequest;
 use crate::request::HttpRequest;
 
-pub trait Extractor<T> {
-    fn extract(&self, request: HttpRequest) -> T;
-}
+pub struct Path<T>(pub T);
 
-pub struct Path<T> {
-    key: String,
-    __phantom: PhantomData<T>
-}
-
-impl<T> Extractor<T> for Path<T>
-    where T : From<String>
-{
-    fn extract(&self, request: HttpRequest) -> T {
-        let path_values = request.path_values.unwrap();
-        let path_value = path_values.get(&self.key);
-
-        match path_value {
-            Some(value) => T::from(value.clone()),
-            None => panic!("No value passed for {}", self.key)
-        }
+impl<T> Path<T> {
+    pub fn new(value: T) -> Self {
+        Path(value)
     }
+}
+
+impl<T> FromRequest for Path<T> where T : TryFrom<String> {
+    fn from_request(index: usize, request: &HttpRequest) -> crate::Result<Self>
+    where
+        Self: Sized
+    {
+        Ok(Path(T::try_from(request
+            .path_values
+            .as_ref()
+            .ok_or::<ExtractorError>(ExtractorError::NotFound.into())
+            ?.values()
+            .nth(index)
+            .ok_or::<ExtractorError>(ExtractorError::NotFound.into())
+            ?.clone()
+        ).map_err(|_| ExtractorError::WrongFormat)?))
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum ExtractorError {
+    #[error("Value not found")]
+    NotFound,
+    #[error("Value is in the wrong format")]
+    WrongFormat
 }

@@ -9,6 +9,16 @@ pub struct HttpResponse {
     pub body: Vec<u8>
 }
 
+impl HttpResponse {
+    pub fn empty(status: HttpStatusCode) -> HttpResponse {
+        HttpResponse {
+            status_code: HttpStatusCode::from(status),
+            headers: HttpHeaderMap::new(),
+            body: Vec::new()
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum HttpStatusCode {

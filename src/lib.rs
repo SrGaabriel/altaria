@@ -11,9 +11,12 @@ use std::net::{Ipv4Addr, SocketAddr};
 use crate::protocol::HttpProtocol;
 use crate::response::HttpStatusCode;
 use crate::router::func::function_handler;
-use crate::router::Router;
+use crate::router::{HttpRouter, Router};
 use std::time::Duration;
 use thiserror::Error;
+use crate::extractor::Path;
+use crate::request::HttpRequest;
+use crate::response::into::IntoResponse;
 
 type Result<T> = anyhow::Result<T>;
 
@@ -120,10 +123,9 @@ async fn start_server() {
         (HttpStatusCode::OK, "Hello, World!")
     });
 
-    let router = router! {
-        "/hello" => handler
-        "/users/{id}" => handler
-    };
+    let router = Router::new()
+        .add_handler("/", handler)
+        .add_function_handler("/users/{name}", greet);
 
     Server::builder()
         .local_port(8080)
@@ -131,6 +133,10 @@ async fn start_server() {
         .start()
         .await
         .unwrap()
+}
+
+async fn greet(Path(name): Path<String>, request: HttpRequest) -> impl IntoResponse {
+    format!("Hello, {}!", name)
 }
 
 #[tokio::test]
