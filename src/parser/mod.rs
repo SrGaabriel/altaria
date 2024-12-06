@@ -1,9 +1,8 @@
-use std::io::Read;
-
 pub mod alpha;
 pub mod beta;
 mod body;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum HttpParserError {
     RequestLine,

@@ -2,16 +2,17 @@ pub mod handler;
 mod tree;
 pub mod func;
 
-use async_trait::async_trait;
 use crate::request::HttpRequest;
 use crate::response::HttpResponse;
 use crate::router::handler::RouteHandler;
-use crate::router::tree::{RouteHandlerPath, RouteNode};
+use crate::router::tree::RouteNode;
+use async_trait::async_trait;
 
 #[async_trait]
 pub trait HttpRouter {
-    fn add_handler(&mut self, path: &str, handler: Box<dyn RouteHandler + Send + Sync + 'static>);
-    
+    fn add_handler<H>(&mut self, path: &str, handler: Box<H>) where
+        H : RouteHandler + Send + Sync + 'static + Clone;
+
     async fn route(&self, request: HttpRequest) -> Option<HttpResponse>;
 }
 
@@ -29,8 +30,10 @@ impl Router {
 
 #[async_trait]
 impl HttpRouter for Router {
-    fn add_handler(&mut self, path: &str, handler: Box<dyn RouteHandler + Send + Sync + 'static>) {
-        self.root.insert(path, handler);
+    fn add_handler<H>(&mut self, path: &str, handler: Box<H>) where
+        H : RouteHandler + Send + Sync + 'static + Clone
+    {
+        self.root.insert(path, handler.clone());
     }
 
     async fn route(&self, request: HttpRequest) -> Option<HttpResponse> {
@@ -42,12 +45,12 @@ impl HttpRouter for Router {
 
 #[macro_export]
 macro_rules! router {
-    ($($key:expr => $value:expr),*) => {
+    ($($key:expr => $value:expr)*) => {
         {
             use crate::router::HttpRouter;
             let mut router = crate::router::Router::new();
             $(
-                router.add_handler($key, $value);
+                router.add_handler($key, Box::new($value.clone()));
             )*
             router
         }

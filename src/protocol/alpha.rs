@@ -1,14 +1,15 @@
 use crate::encoder::alpha::AlphaHttpEncoder;
 use crate::encoder::format::{DefaultHttpResponseFormatter, HttpResponseFormatter};
+use crate::headers;
 use crate::parser::alpha::AlphaHttpParser;
 use crate::protocol::{HttpProtocol, HttpProtocolError};
 use crate::response::{HttpResponse, HttpStatusCode};
-use crate::headers;
+use crate::router::{HttpRouter, Router};
+use anyhow::bail;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
-use crate::router::{HttpRouter, Router};
 
 pub struct AlphaHttpProtocol {
     socket: Option<TcpListener>,
@@ -46,16 +47,16 @@ impl HttpProtocol for AlphaHttpProtocol {
         self.router = Arc::new(Some(router))
     }
 
-    async fn connect(&mut self, addr: &str) -> Result<(), HttpProtocolError> {
-        let socket = TcpListener::bind(addr).await.map_err(|e| HttpProtocolError { message: e.to_string() })?;
+    async fn connect(&mut self, addr: &str) -> crate::Result<()> {
+        let socket = TcpListener::bind(addr).await?;
         self.socket = Some(socket);
         Ok(())
     }
 
-    async fn listen(&'static self) -> Result<(), HttpProtocolError> {
+    async fn listen(&'static self) -> crate::Result<()> {
         let socket = match &self.socket {
             Some(socket) => socket,
-            None => return Err(HttpProtocolError { message: "Socket not bound".to_string() })
+            None => bail!(HttpProtocolError::UnboundSocket)
         };
 
         loop {
@@ -103,7 +104,7 @@ impl HttpProtocol for AlphaHttpProtocol {
                 let encoded = match encoder.encode(formatted) {
                     Ok(encoded) => encoded,
                     Err(e) => {
-                        eprintln!("Failed to encode response: {}", e.message);
+                        eprintln!("Failed to encode response: {}", e);
                         return;
                     }
                 };

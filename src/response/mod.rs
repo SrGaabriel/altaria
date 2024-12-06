@@ -9,6 +9,7 @@ pub struct HttpResponse {
     pub body: Vec<u8>
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum HttpStatusCode {
     Continue = 100,

@@ -9,3 +9,5 @@ async-trait = "0.1.83"
 reqwest = { version = "0.12.9", features = ["http2"] }
 chrono = "0.4.38"
 hpack = "0.3.0"
+anyhow = "1.0.94"
+thiserror = "2.0.4"

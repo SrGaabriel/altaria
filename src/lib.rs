@@ -6,16 +6,13 @@ mod util;
 mod protocol;
 mod router;
 
-use crate::encoder::format::HttpResponseFormatter;
 use crate::protocol::HttpProtocol;
-use std::future::IntoFuture;
-use std::io::{Read, Write};
-use std::time::Duration;
-use tokio::io::AsyncWriteExt;
-use crate::response::{HttpResponse, HttpStatusCode};
-use crate::response::into::IntoResponse;
+use crate::response::HttpStatusCode;
 use crate::router::func::function_handler;
 use crate::router::Router;
+use std::time::Duration;
+
+type Result<T> = anyhow::Result<T>;
 
 pub struct HttpServer {
     pub protocol: Box<dyn HttpProtocol>
@@ -34,24 +31,25 @@ impl HttpServer {
         }
     }
 
-    pub async fn bind(&mut self, addr: &str) -> Result<&mut HttpServer, protocol::HttpProtocolError> {
+    pub async fn bind(&mut self, addr: &str) -> Result<&mut HttpServer> {
         self.protocol.connect(addr).await.map(|_| self)
     }
 
-    pub async fn listen(self) -> Result<(), protocol::HttpProtocolError> {
+    pub async fn listen(self) -> Result<()> {
         let static_ref = Box::leak(self.protocol);
         static_ref.listen().await
     }
 }
 
-#[tokio::main]
-async fn main() {
-    let handler = function_handler(|request| async {
+#[tokio::test]
+async fn start_server() {
+    let handler = function_handler(|_| async {
         (HttpStatusCode::Unauthorized, "Hello, World!")
     });
 
     let router = router! {
         "/hello" => handler
+        "/baba/{id}" => handler
     };
 
     let mut server = HttpServer::http1(router);
@@ -72,8 +70,8 @@ async fn send_requests() {
         .build()
         .unwrap();
     let time = std::time::Instant::now();
-    for i in 0..1 {
-        let request_future = client.post("http://localhost:8080/hello")
+    for i in 1..10 {
+        let request_future = client.post("http://localhost:8080/baba/1")
             .body("Hello, World!")
             .send();
 

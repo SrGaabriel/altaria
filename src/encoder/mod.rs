@@ -1,8 +1,9 @@
+use thiserror::Error;
+
 pub mod beta;
 pub mod format;
 pub mod alpha;
 
-#[derive(Debug)]
-pub struct HttpEncoderError {
-    pub message: String
+#[derive(Debug, Error)]
+pub enum HttpEncoderError {
 }

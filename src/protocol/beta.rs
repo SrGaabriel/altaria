@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use anyhow::bail;
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
@@ -34,16 +35,16 @@ impl<'a> HttpProtocol for BetaHttpProtocol<'a> {
         todo!()
     }
 
-    async fn connect(&mut self, addr: &str) -> Result<(), HttpProtocolError> {
-        let socket = TcpListener::bind(addr).await.map_err(|e| HttpProtocolError { message: e.to_string() })?;
+    async fn connect(&mut self, addr: &str) -> crate::Result<()> {
+        let socket = TcpListener::bind(addr).await?;
         self.socket = Some(socket);
         Ok(())
     }
 
-    async fn listen(&'static self) -> Result<(), HttpProtocolError> {
+    async fn listen(&'static self) -> crate::Result<()> {
         let socket = match &self.socket {
             Some(socket) => socket,
-            None => return Err(HttpProtocolError { message: "Socket not bound".to_string() })
+            None => bail!(HttpProtocolError::UnboundSocket)
         };
 
         loop {
@@ -74,7 +75,7 @@ impl<'a> HttpProtocol for BetaHttpProtocol<'a> {
                         let encoded = match encoder.encode(formatted) {
                             Ok(encoded) => encoded,
                             Err(e) => {
-                                eprintln!("Failed to encode response: {}", e.message);
+                                eprintln!("Failed to encode response: {}", e);
                                 return;
                             }
                         };

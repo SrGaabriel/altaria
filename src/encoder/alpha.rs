@@ -1,4 +1,3 @@
-use crate::encoder::HttpEncoderError;
 use crate::response::HttpResponse;
 
 pub struct AlphaHttpEncoder {
@@ -16,7 +15,7 @@ impl AlphaHttpEncoder {
         encoded.extend_from_slice(b"\r\n");
     }
 
-    pub fn encode(&self, response: HttpResponse) -> Result<Vec<u8>, HttpEncoderError> {
+    pub fn encode(&self, response: HttpResponse) -> crate::Result<Vec<u8>> {
         let mut encoded = Vec::new();
         encoded.extend_from_slice(b"HTTP/1.1 ");
         encoded.extend_from_slice(response.status_code.code().to_string().as_bytes());

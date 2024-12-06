@@ -1,9 +1,9 @@
+use crate::parser::body::read_body_based_on_headers;
 use crate::parser::HttpParserError;
 use crate::request::{HttpHeader, HttpHeaderMap, HttpMethod, HttpProtocol, HttpRequest, HttpScheme};
 use std::collections::HashMap;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
-use crate::parser::body::read_body_based_on_headers;
 
 pub struct AlphaHttpParser {
 
@@ -14,7 +14,7 @@ impl AlphaHttpParser {
         AlphaHttpParser {}
     }
 
-    async fn parse_request_line(&self, mut reader: &mut BufReader<&mut TcpStream>) -> Result<(HttpMethod, String), HttpParserError> {
+    async fn parse_request_line(&self, reader: &mut BufReader<&mut TcpStream>) -> Result<(HttpMethod, String), HttpParserError> {
         let mut line = String::new();
         let bytes_read = reader.read_line(&mut line).await;
 
