@@ -7,7 +7,14 @@ pub struct HttpRequest {
     pub path: String,
     pub method: HttpMethod,
     pub headers: HttpHeaderMap,
-    pub body: Vec<u8>
+    pub body: Vec<u8>,
+    pub(crate) path_values: Option<HashMap<String, String>>
+}
+
+impl HttpRequest {
+    pub(crate) fn set_path_values(&mut self, values: HashMap<String, String>) {
+        self.path_values = Some(values)
+    }
 }
 
 pub type HttpHeaderMap = HashMap<HttpHeader, String>;

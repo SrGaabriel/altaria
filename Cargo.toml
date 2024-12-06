@@ -1,6 +1,6 @@
 [package]
 name = "altaria"
-version = "0.1.0"
+version = "0.1.101"
 edition = "2021"
 
 description = "Altaria is an asynchronous, memory-safe, blazingly fast HTTP server written in Rust. It currently supports HTTP1.1 parsing and encoding and HTTP2 parsing."
@@ -12,8 +12,10 @@ repository = "https://github.com/SrGaabriel/altaria"
 [dependencies]
 tokio = { version = "1.42.0", features = ["full"] }
 async-trait = "0.1.83"
-reqwest = { version = "0.12.9", features = ["http2"] }
 chrono = "0.4.38"
 hpack = "0.3.0"
 anyhow = "1.0.94"
 thiserror = "2.0.4"
+
+[dev-dependencies]
+reqwest = { version = "0.12.9", features = ["http2"] }

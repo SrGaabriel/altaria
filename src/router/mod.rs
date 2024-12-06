@@ -36,9 +36,10 @@ impl HttpRouter for Router {
         self.root.insert(path, handler.clone());
     }
 
-    async fn route(&self, request: HttpRequest) -> Option<HttpResponse> {
+    async fn route(&self, mut request: HttpRequest) -> Option<HttpResponse> {
         let route = self.root.find(&request.path)?;
         let handler = route.handler;
+        request.set_path_values(route.values);
         Some(handler.handle(request).await)
     }
 }

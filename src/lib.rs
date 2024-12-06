@@ -5,6 +5,7 @@ mod response;
 mod util;
 mod protocol;
 mod router;
+mod extractor;
 
 use std::net::{Ipv4Addr, SocketAddr};
 use crate::protocol::HttpProtocol;
@@ -116,12 +117,12 @@ impl Server {
 #[tokio::test]
 async fn start_server() {
     let handler = function_handler(|_| async {
-        (HttpStatusCode::Unauthorized, "Hello, World!")
+        (HttpStatusCode::OK, "Hello, World!")
     });
 
     let router = router! {
         "/hello" => handler
-        "/test/{id}" => handler
+        "/users/{id}" => handler
     };
 
     Server::builder()
@@ -139,7 +140,7 @@ async fn send_requests() {
         .unwrap();
     let time = std::time::Instant::now();
     for _ in 1..10 {
-        let request_future = client.post("http://localhost:8080/baba/1")
+        let request_future = client.post("http://localhost:8080/users/gabriel")
             .body("Hello, World!")
             .send();
 
