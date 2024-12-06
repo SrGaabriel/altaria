@@ -3,6 +3,14 @@ name = "altaria"
 version = "0.1.0"
 edition = "2021"
 
+authors = ["Gabriel <gabriel@minatel.dev>"]
+license="MIT"
+license-file = "LICENSE"
+homepage = "https://github.com/SrGaabriel/altaria"
+repository = "https://github.com/SrGaabriel/altaria"
+
+[lib]
+
 [dependencies]
 tokio = { version = "1.42.0", features = ["full"] }
 async-trait = "0.1.83"
