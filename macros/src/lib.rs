@@ -15,7 +15,6 @@ pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
             function_parameters.insert(ident, syn::parse_str(&ty).unwrap());
         }
     }
-    println!("wow {:?}", function_parameters);
 
     TokenStream::from(quote! {
         #function_item

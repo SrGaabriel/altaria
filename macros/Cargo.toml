@@ -1,11 +1,17 @@
 [package]
 name = "altaria-macros"
-version = "0.1.101"
+version = "0.1.0"
 edition = "2021"
+
+description = "Derive and proc macros for Altaria"
+authors = ["Gabriel <gabriel@minatel.dev>"]
+license-file = "../LICENSE"
+homepage = "https://github.com/SrGaabriel/altaria"
+repository = "https://github.com/SrGaabriel/altaria"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-syn = "2.0.71"
+syn = { version = "2.0.90", features = ["full"] }
 quote = "1.0.36"
