@@ -1,4 +1,4 @@
-use crate::encoder::{HttpEncoder, HttpEncoderError};
+use crate::encoder::HttpEncoderError;
 use crate::response::HttpResponse;
 use hpack::Encoder as HpackEncoder;
 
@@ -16,15 +16,14 @@ impl<'a> BetaHttpEncoder<'a> {
         }
     }
 
-    fn encode_headers(&self, response: &HttpResponse) -> Vec<u8> {
+    fn encode_headers(&mut self, response: &HttpResponse) -> Vec<u8> {
         let mut encoded_headers = Vec::new();
 
         for (key, value) in &response.headers {
-            todo!();
-            // self.hpack_encoder.encode_header_into(
-            //     (key.name().as_bytes(), value.as_bytes()),
-            //     &mut encoded_headers
-            // ).expect("Failed to encode header");
+            self.hpack_encoder.encode_header_into(
+                 (key.name().as_bytes(), value.as_bytes()),
+                 &mut encoded_headers
+            ).expect("Failed to encode header");
         }
 
         encoded_headers
@@ -48,17 +47,9 @@ impl<'a> BetaHttpEncoder<'a> {
 
         frame
     }
-}
 
-impl<'a> HttpEncoder for BetaHttpEncoder<'a> {
-    fn encode(&self, response: HttpResponse) -> Result<Vec<u8>, HttpEncoderError> {
+    pub fn encode(&mut self, response: HttpResponse) -> Result<Vec<u8>, HttpEncoderError> {
         let mut encoded = Vec::new();
-
-        let headers = response
-            .headers
-            .iter()
-            .map(|(key, value)| (key.name(), value.to_string()))
-            .collect::<Vec<_>>();
 
         let compressed_headers = self.encode_headers(&response);
         let headers_frame = self.create_frame(0x1, END_HEADERS, 1, &compressed_headers);

@@ -4,21 +4,26 @@ mod encoder;
 mod response;
 mod util;
 mod protocol;
+mod router;
 
 use crate::encoder::format::HttpResponseFormatter;
 use crate::protocol::HttpProtocol;
 use std::future::IntoFuture;
 use std::io::{Read, Write};
+use std::time::Duration;
 use tokio::io::AsyncWriteExt;
+use crate::response::{HttpResponse, HttpStatusCode};
+use crate::router::func::function_handler;
+use crate::router::Router;
 
 pub struct HttpServer {
     pub protocol: Box<dyn HttpProtocol>
 }
 
 impl HttpServer {
-    pub fn http1() -> HttpServer {
+    pub fn http1(router: Router) -> HttpServer {
         HttpServer {
-            protocol: Box::new(protocol::alpha::AlphaHttpProtocol::new())
+            protocol: Box::new(protocol::alpha::AlphaHttpProtocol::link_router(router))
         }
     }
 
@@ -41,23 +46,41 @@ impl HttpServer {
 #[tokio::main]
 async fn main() {
     tokio::spawn(async {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
         let client = reqwest::Client::builder()
-            .http2_prior_knowledge()
             .build()
             .unwrap();
         let time = std::time::Instant::now();
-        for i in 0..1000 {
-            client.post("http://localhost:8080/ghfsdghis")
+        for i in 0..1 {
+            let request_future = client.post("http://localhost:8080/hello")
                 .body("Hello, world!")
-                .send()
-                .await;
+                .send();
+
+            let response = tokio::time::timeout(Duration::from_secs(1), request_future)
+                .await
+                .expect("Request timed out")
+                .expect("Unsuccesful request");
+            println!("Successful request: {:?}", response)
         }
         let elapsed = time.elapsed().as_millis();
         println!("All requests completed in {}ms", elapsed);
     });
 
-    let mut server = HttpServer::http2();
+    let handler = function_handler(|request| async {
+      HttpResponse {
+          status_code: HttpStatusCode::ImATeapot,
+          headers: headers! {
+              ContentType: ""
+          },
+          body: "Hello, World!".as_bytes().to_vec()
+      }
+    });
+
+    let router = router! {
+        "hello" => handler
+    };
+
+    let mut server = HttpServer::http1(router);
     server
         .bind("localhost:8080")
         .await

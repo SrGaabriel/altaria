@@ -1,6 +1,5 @@
 use crate::encoder::alpha::AlphaHttpEncoder;
 use crate::encoder::format::{DefaultHttpResponseFormatter, HttpResponseFormatter};
-use crate::encoder::HttpEncoder;
 use crate::parser::alpha::AlphaHttpParser;
 use crate::protocol::{HttpProtocol, HttpProtocolError};
 use crate::response::{HttpResponse, HttpStatusCode};
@@ -9,9 +8,11 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
+use crate::router::{HttpRouter, Router};
 
 pub struct AlphaHttpProtocol {
     socket: Option<TcpListener>,
+    router: Arc<Option<Router>>,
     parser: Arc<AlphaHttpParser>,
     encoder: Arc<AlphaHttpEncoder>,
     formatter: Arc<Box<dyn HttpResponseFormatter + Send + Sync>>
@@ -21,6 +22,17 @@ impl AlphaHttpProtocol {
     pub fn new() -> Self {
         AlphaHttpProtocol {
             socket: None,
+            router: Arc::new(None),
+            parser: Arc::new(AlphaHttpParser::new()),
+            encoder: Arc::new(AlphaHttpEncoder::new()),
+            formatter: Arc::new(Box::new(DefaultHttpResponseFormatter::new()))
+        }
+    }
+
+    pub fn link_router(router: Router) -> Self {
+        AlphaHttpProtocol {
+            socket: None,
+            router: Arc::new(Some(router)),
             parser: Arc::new(AlphaHttpParser::new()),
             encoder: Arc::new(AlphaHttpEncoder::new()),
             formatter: Arc::new(Box::new(DefaultHttpResponseFormatter::new()))
@@ -30,6 +42,10 @@ impl AlphaHttpProtocol {
 
 #[async_trait]
 impl HttpProtocol for AlphaHttpProtocol {
+    fn set_router(&mut self, router: Router) {
+        self.router = Arc::new(Some(router))
+    }
+
     async fn connect(&mut self, addr: &str) -> Result<(), HttpProtocolError> {
         let socket = TcpListener::bind(addr).await.map_err(|e| HttpProtocolError { message: e.to_string() })?;
         self.socket = Some(socket);
@@ -52,6 +68,7 @@ impl HttpProtocol for AlphaHttpProtocol {
             };
             println!("Accepted connection from {}", addr);
 
+            let router = self.router.clone();
             let parser = self.parser.clone();
             let encoder = self.encoder.clone();
             let formatter = self.formatter.clone();
@@ -65,12 +82,21 @@ impl HttpProtocol for AlphaHttpProtocol {
                     }
                 };
 
-                let response = HttpResponse {
-                    status_code: HttpStatusCode::ImATeapot,
-                    headers: headers! {
-                    ContentType: "text/plain"
-                },
-                    body: "Hello, world!".to_string().into_bytes()
+                let routed_response = if let Some(router) = router.as_ref() {
+                    router.route(parsed).await
+                } else {
+                    None
+                };
+
+                let response: HttpResponse = match routed_response {
+                    Some(response) => response,
+                    _ => HttpResponse {
+                        status_code: HttpStatusCode::NotFound,
+                        headers: headers! {
+                            ContentType: "text/plain"
+                        },
+                        body: vec![]
+                    }
                 };
 
                 let formatted = formatter.format(response);
@@ -95,3 +121,6 @@ impl HttpProtocol for AlphaHttpProtocol {
         }
     }
 }
+
+unsafe impl Send for AlphaHttpProtocol {}
+unsafe impl Sync for AlphaHttpProtocol {}
