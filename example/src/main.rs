@@ -14,7 +14,7 @@ async fn main() {
 
     let router = Router::new()
         .add_handler("/", handler)
-        .add_function_handler("/users/{name}", greet);
+        .add_handler("/users/{name}", greet);
 
     Server::builder()
         .local_port(8080)

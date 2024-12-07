@@ -48,6 +48,25 @@ where
 }
 
 #[async_trait]
+impl FunctionRouteHandler<()> for CallbackRouteHandler {
+    async fn handle_request(&self, request: HttpRequest) -> HttpResponse {
+        (self.func)(request).await
+    }
+}
+
+#[async_trait]
+impl<F, Fut, R> FunctionRouteHandler<()> for F
+where
+    F : (Fn(HttpRequest) -> Fut) + Send + Sync + 'static + Clone,
+    Fut : Future<Output = R> + Send + 'static,
+    R : IntoResponse + Send + 'static
+{
+    async fn handle_request(&self, request: HttpRequest) -> HttpResponse {
+        self(request).await.into_response()
+    }
+}
+
+#[async_trait]
 impl<F, Fut, R, E1> FunctionRouteHandler<(E1)> for F
 where
     F : (Fn(E1, HttpRequest) -> Fut) + Send + Sync + 'static + Clone,
