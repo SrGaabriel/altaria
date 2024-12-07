@@ -1,0 +1,8 @@
+[package]
+name = "altaria-examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+altaria={ path = "../" }
+tokio={ version = "1.42.0", features = ["full"] }

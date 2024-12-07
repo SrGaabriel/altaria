@@ -11,8 +11,8 @@ use crate::router::func::FunctionRouteHandler;
 
 #[async_trait]
 pub trait HttpRouter {
-    fn add_handler<H>(self, path: &str, handler: Box<H>) -> Self where
-        H : RouteHandler + Send + Sync + 'static + Clone;
+    fn add_handler<Handler>(self, path: &str, handler: Handler) -> Self where
+        Handler : RouteHandler + Send + Sync + 'static + Clone;
 
     fn add_function_handler<Ext, Handler>(self, path: &str, handler: Handler) -> Self where
         Ext: Send + Sync + 'static,
@@ -35,10 +35,10 @@ impl Router {
 
 #[async_trait]
 impl HttpRouter for Router {
-    fn add_handler<H>(mut self, path: &str, handler: Box<H>) -> Self where
-        H : RouteHandler + Send + Sync + 'static
+    fn add_handler<Handler>(mut self, path: &str, handler: Handler) -> Self where
+        Handler : RouteHandler + Send + Sync + 'static
     {
-        self.root.insert(path, handler);
+        self.root.insert(path, Box::new(handler));
         self
     }
 
@@ -47,7 +47,7 @@ impl HttpRouter for Router {
         Ext: Send + Sync + 'static,
         Handler: FunctionRouteHandler<Ext> + Sized + Send + 'static,
     {
-        self.add_handler(path, Box::new(handler.into_route_handler()))
+        self.add_handler(path, handler.into_route_handler())
     }
 
     async fn route(&self, mut request: HttpRequest) -> Option<HttpResponse> {

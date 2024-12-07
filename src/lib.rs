@@ -1,22 +1,17 @@
 mod parser;
-mod request;
+pub mod request;
 mod encoder;
-mod response;
+pub mod response;
 mod util;
 mod protocol;
-mod router;
-mod extractor;
+pub mod router;
+pub mod extractor;
 
-use std::net::{Ipv4Addr, SocketAddr};
 use crate::protocol::HttpProtocol;
-use crate::response::HttpStatusCode;
-use crate::router::func::function_handler;
-use crate::router::{HttpRouter, Router};
-use std::time::Duration;
-use thiserror::Error;
-use crate::extractor::Path;
-use crate::request::HttpRequest;
 use crate::response::into::IntoResponse;
+use crate::router::{HttpRouter, Router};
+use std::net::{Ipv4Addr, SocketAddr};
+use thiserror::Error;
 
 type Result<T> = anyhow::Result<T>;
 
@@ -71,7 +66,7 @@ pub enum ServerBuildError {
 }
 
 impl Server {
-    fn builder() -> Self {
+    pub fn builder() -> Self {
         Server {
             address: None,
             router: None
@@ -115,47 +110,4 @@ impl Server {
             .await?;
         Ok(())
     }
-}
-
-#[tokio::test]
-async fn start_server() {
-    let handler = function_handler(|_| async {
-        (HttpStatusCode::OK, "Hello, World!")
-    });
-
-    let router = Router::new()
-        .add_handler("/", handler)
-        .add_function_handler("/users/{name}", greet);
-
-    Server::builder()
-        .local_port(8080)
-        .router(router)
-        .start()
-        .await
-        .unwrap()
-}
-
-async fn greet(Path(name): Path<String>, request: HttpRequest) -> impl IntoResponse {
-    format!("Hello, {}!", name)
-}
-
-#[tokio::test]
-async fn send_requests() {
-    let client = reqwest::Client::builder()
-        .build()
-        .unwrap();
-    let time = std::time::Instant::now();
-    for _ in 1..10 {
-        let request_future = client.post("http://localhost:8080/users/gabriel")
-            .body("Hello, World!")
-            .send();
-
-        let response = tokio::time::timeout(Duration::from_secs(1), request_future)
-            .await
-            .expect("Request timed out")
-            .expect("Unsuccesful request");
-        println!("({}) Successful request: {}", response.status(), response.text().await.unwrap())
-    }
-    let elapsed = time.elapsed().as_millis();
-    println!("All requests completed in {}ms", elapsed);
 }

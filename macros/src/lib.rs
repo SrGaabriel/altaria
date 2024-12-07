@@ -16,6 +16,12 @@ pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
+    let function_block = &function_item.block;
+    let new_block = quote! {
+        let
+        #function_block
+    };
+
     TokenStream::from(quote! {
         #function_item
     })

@@ -20,19 +20,19 @@ impl RouteHandler for CallbackRouteHandler {
     }
 }
 
-pub fn function_handler<F, Fut, R>(callback: F) -> Box<CallbackRouteHandler>
+pub fn function_handler<F, Fut, R>(callback: F) -> CallbackRouteHandler
 where F : Fn(HttpRequest) -> Fut + Send + Sync + 'static + Clone,
       Fut : Future<Output = R> + Send + 'static,
       R : IntoResponse + Send + 'static
 {
-    Box::new(CallbackRouteHandler {
+    CallbackRouteHandler {
         func: Arc::new(move |request| Box::pin({
             let value = callback.clone();
             async move {
                 value.clone()(request).await.into_response()
             }
         }))
-    })
+    }
 }
 
 #[async_trait]
@@ -76,4 +76,10 @@ pub trait FunctionRouteHandler<Extractors> : Sync {
             }))
         }
     }
+}
+
+pub struct RouteHandlerPhantomType;
+
+pub trait IntoRouteHandler {
+    fn into_route_handler(self) -> CallbackRouteHandler;
 }
