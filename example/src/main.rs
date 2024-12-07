@@ -24,6 +24,9 @@ async fn main() {
         .unwrap()
 }
 
-async fn greet(Path(name): Path<String>, request: HttpRequest) -> impl IntoResponse {
+async fn greet(
+    Path(name): Path<String>,
+    request: HttpRequest
+) -> impl IntoResponse {
     format!("Hello, {}!", name)
 }
