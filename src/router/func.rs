@@ -99,7 +99,7 @@ where
 }
 
 #[async_trait]
-impl<F, Fut, R, E1> FunctionRouteHandler<(E1)> for F
+impl<F, Fut, R, E1> FunctionRouteHandler<E1> for F
 where
     F : (Fn(E1) -> Fut) + Send + Sync + 'static + Clone,
     Fut : Future<Output = R> + Send + 'static,

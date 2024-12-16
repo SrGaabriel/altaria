@@ -9,8 +9,7 @@ pub mod extractor;
 mod middleware;
 
 use crate::protocol::HttpProtocol;
-use crate::response::into::IntoResponse;
-use crate::router::{HttpRouter, Router};
+use crate::router::{Router};
 use std::net::{Ipv4Addr, SocketAddr};
 use thiserror::Error;
 
@@ -74,7 +73,7 @@ impl Server {
         }
     }
 
-    pub fn local_port(mut self, port: u16) -> Self {
+    pub fn local_port(self, port: u16) -> Self {
         let ip = Ipv4Addr::new(127, 0, 0, 1);
         let addr = SocketAddr::new(ip.into(), port);
         self.address(addr)
