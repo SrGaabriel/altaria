@@ -78,6 +78,7 @@ impl AlphaHttpParser {
             method,
             headers,
             body,
+            flow: None,
             path_values: None
         })
     }

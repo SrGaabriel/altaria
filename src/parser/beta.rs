@@ -53,6 +53,7 @@ impl<'a> BetaHttpParser<'a> {
             path,
             headers,
             body,
+            flow: None,
             path_values: None
         })
     }

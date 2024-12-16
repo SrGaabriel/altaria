@@ -1,8 +1,8 @@
-pub mod from;
-
 use std::collections::HashMap;
+use std::sync::Arc;
+use crate::middleware::RequestFlow;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HttpRequest {
     pub protocol: HttpProtocol,
     pub scheme: HttpScheme,
@@ -10,8 +10,11 @@ pub struct HttpRequest {
     pub method: HttpMethod,
     pub headers: HttpHeaderMap,
     pub body: Vec<u8>,
+    pub flow: Option<Arc<RequestFlow>>,
     pub(crate) path_values: Option<HashMap<String, String>>
 }
+
+unsafe impl Send for HttpRequest {}
 
 impl HttpRequest {
     pub(crate) fn set_path_values(&mut self, values: HashMap<String, String>) {

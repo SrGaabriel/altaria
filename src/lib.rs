@@ -6,6 +6,7 @@ mod util;
 mod protocol;
 pub mod router;
 pub mod extractor;
+mod middleware;
 
 use crate::protocol::HttpProtocol;
 use crate::response::into::IntoResponse;
