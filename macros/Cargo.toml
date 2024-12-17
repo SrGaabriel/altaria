@@ -1,6 +1,6 @@
 [package]
 name = "altaria-macros"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 
 description = "Derive and proc macros for Altaria"
@@ -15,3 +15,5 @@ proc-macro = true
 [dependencies]
 syn = { version = "2.0.90", features = ["full"] }
 quote = "1.0.36"
+proc-macro2 = "1.0.92"
+async-trait = "0.1.83"

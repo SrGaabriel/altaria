@@ -1,8 +1,10 @@
+pub extern crate async_trait;
+pub extern crate paste;
+
 mod parser;
 pub mod request;
 mod encoder;
 pub mod response;
-mod util;
 mod protocol;
 pub mod router;
 pub mod extractor;

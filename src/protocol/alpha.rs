@@ -48,7 +48,7 @@ impl HttpProtocol for AlphaHttpProtocol {
     }
 
     async fn connect(&mut self, addr: &str) -> crate::Result<()> {
-        let socket = TcpListener::bind(addr).await?;
+        let socket = TcpListener::bind(addr).await.map_err(|_| HttpProtocolError::PortAlreadyInUse)?;
         self.socket = Some(socket);
         Ok(())
     }

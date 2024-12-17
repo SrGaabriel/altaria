@@ -1,4 +1,4 @@
-use crate::request::HttpRequest;
+use crate::request::{HttpMethod, HttpRequest};
 use crate::response::into::IntoResponse;
 use crate::response::{HttpResponse, HttpStatusCode};
 use crate::router::handler::RouteHandler;
@@ -10,11 +10,19 @@ use crate::extractor::{ExtractorError, FromRequest};
 
 #[derive(Clone)]
 pub struct CallbackRouteHandler {
+    method: Option<HttpMethod>,
     func: Arc<dyn Fn(HttpRequest) -> Pin<Box<dyn Future<Output = HttpResponse> + Send>> + Send + Sync>
 }
 
 #[async_trait]
 impl RouteHandler for CallbackRouteHandler {
+    fn handles_method(&self, method: HttpMethod) -> bool {
+        match &self.method {
+            Some(m) => *m == method,
+            None => true
+        }
+    }
+
     async fn handle(&self, request: HttpRequest) -> HttpResponse {
         (self.func)(request).await
     }
@@ -26,6 +34,7 @@ where F : Fn(HttpRequest) -> Fut + Send + Sync + 'static + Clone,
       R : IntoResponse + Send + 'static
 {
     CallbackRouteHandler {
+        method: None,
         func: Arc::new(move |request| Box::pin({
             let value = callback.clone();
             async move {
@@ -40,9 +49,14 @@ where F : Fn(HttpRequest) -> Fut + Send + Sync + 'static + Clone,
 pub trait FunctionRouteHandler<Extractors> : Sync {
     async fn handle_request(&self, request: HttpRequest) -> HttpResponse;
 
+    fn get_method(&self) -> Option<HttpMethod> {
+        None
+    }
+
     fn into_route_handler(self) -> CallbackRouteHandler where Self: Sized + Send + 'static {
         let pointer_to_self = Arc::new(self);
         CallbackRouteHandler {
+            method: pointer_to_self.get_method(),
             func: Arc::new(move |request| Box::pin({
                 let self_value = pointer_to_self.clone();
                 async move {
@@ -53,7 +67,7 @@ pub trait FunctionRouteHandler<Extractors> : Sync {
     }
 }
 
-fn handle_function_failure(err: ExtractorError) -> HttpResponse {
+pub fn handle_function_failure(err: ExtractorError) -> HttpResponse {
     match err {
         ExtractorError::UnregisteredExtension => {
             (HttpStatusCode::InternalServerError, "altaria: This route handler expected an extension with a type that wasn't registered in the router declaration").into_response()
@@ -89,12 +103,12 @@ impl FunctionRouteHandler<()> for CallbackRouteHandler {
 #[async_trait]
 impl<F, Fut, R> FunctionRouteHandler<()> for F
 where
-    F : (Fn(HttpRequest) -> Fut) + Send + Sync + 'static + Clone,
+    F : (Fn() -> Fut) + Send + Sync + 'static + Clone,
     Fut : Future<Output = R> + Send + 'static,
-    R : IntoResponse + Send + 'static
+    R : IntoResponse + Send + 'static,
 {
-    async fn handle_request(&self, request: HttpRequest) -> HttpResponse {
-        self(request).await.into_response()
+    async fn handle_request(&self, _request: HttpRequest) -> HttpResponse {
+        self().await.into_response()
     }
 }
 

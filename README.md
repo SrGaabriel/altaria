@@ -8,15 +8,15 @@ Altaria is an asynchronous, memory-safe, blazingly fast HTTP server written in R
 ```rust
 #[tokio::main]
 async fn main() {
-    let callback_handler = function_handler(|_| async {
+    let handler = function_handler(|_| async {
         (HttpStatusCode::OK, "Hello, World!")
     });
 
     let router = Router::new()
         .add_resource("Altaria")
-        .add_handler("/", callback_handler)
-        .add_handler("/meet/{name}", meet)
-        .add_handler("/users/{name}", greet);
+        .add_handler("/", handler)
+        .add_endpoint(endpoint!(greet))
+        .add_endpoint(endpoint!(meet));
 
     Server::builder()
         .local_port(8080)
@@ -26,16 +26,18 @@ async fn main() {
         .unwrap()
 }
 
+#[post("/greet/{name}")]
 async fn greet(
-    Param(name): Param<String>,
-) -> impl IntoResponse {
+    name: String
+) -> String {
     format!("Hello, {name}")
 }
 
+#[get("/meet/{name}")]
 async fn meet(
-    Param(path): Param<String>,
-    Resource(name): Resource<&str>,
-) -> impl IntoResponse {
-    format!("I'm, {name}! Hello, {path}")
+    name: String,
+    Resource(me): Resource<&str>,
+) -> String {
+    format!("I'm, {me}! Hello, {name}")
 }
 ```

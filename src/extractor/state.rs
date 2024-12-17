@@ -24,13 +24,6 @@ impl<T> FromRequest for Resource<T> where T : Clone + Send + Sync + 'static {
 
 pub type ResourceMap = HashMap<TypeId, Box<dyn ResourceObligations + Send + Sync>>;
 
-pub(crate) fn to_resource_map(vec: &Vec<Box<dyn ResourceObligations + Send + Sync>>) -> ResourceMap {
-    vec.iter().map(|resource| {
-        (resource.inner_type_id(), resource.clone_box())
-    }
-    ).collect()
-}
-
 pub trait ResourceObligations: Any + Sync + Send {
     fn inner_type_id(&self) -> TypeId {
         TypeId::of::<Self>()

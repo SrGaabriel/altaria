@@ -2,15 +2,17 @@ pub mod handler;
 mod tree;
 pub mod func;
 
-use std::sync::Arc;
+use crate::extractor::state::{Resource, ResourceMap};
+use crate::middleware::RequestFlow;
 use crate::request::HttpRequest;
 use crate::response::HttpResponse;
+use crate::router::func::FunctionRouteHandler;
 use crate::router::handler::RouteHandler;
 use crate::router::tree::RouteNode;
 use async_trait::async_trait;
-use crate::extractor::state::{to_resource_map, Resource, ResourceObligations};
-use crate::middleware::RequestFlow;
-use crate::router::func::FunctionRouteHandler;
+use std::any::TypeId;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[async_trait]
 pub trait HttpRouter {
@@ -24,19 +26,24 @@ pub trait HttpRouter {
     fn add_resource<T>(self, resource: T) -> Self where
         T: Clone + Send + Sync + 'static;
 
+    fn add_endpoint<Ext, Handler>(self, endpoint: (&str, Handler)) -> Self
+    where
+        Ext: Send + Sync + 'static,
+        Handler: FunctionRouteHandler<Ext> + Sized + Send + 'static;
+
     async fn route(&self, request: HttpRequest) -> Option<HttpResponse>;
 }
 
 pub struct Router {
     root: RouteNode,
-    resources: Vec<Box<dyn ResourceObligations + Send + Sync>>
+    resources: ResourceMap
 }
 
 impl Router {
     pub fn new() -> Self {
         Router {
             root: RouteNode::new(),
-            resources: Vec::new()
+            resources: HashMap::new()
         }
     }
 }
@@ -62,32 +69,47 @@ impl HttpRouter for Router {
     where
         T: Clone + Send + Sync + 'static
     {
-        self.resources.push(Box::new(Resource(resource)));
+        if self.resources.contains_key(&TypeId::of::<Resource<T>>()) {
+            panic!("Resource of type {} already exists in the router", std::any::type_name::<T>());
+        }
+        self.resources.insert(TypeId::of::<Resource<T>>(), Box::new(Resource::new(resource)));
         self
+    }
+
+    fn add_endpoint<Ext, Handler>(self, endpoint: (&str, Handler)) -> Self
+    where
+        Ext: Send + Sync + 'static,
+        Handler: FunctionRouteHandler<Ext> + Sized + Send + 'static,
+    {
+        self.add_handler(endpoint.0, endpoint.1)
     }
 
     async fn route(&self, mut request: HttpRequest) -> Option<HttpResponse> {
         let route = self.root.find(&request.path)?;
         let handler = route.handler;
-        let resources = to_resource_map(&self.resources);
-        request.flow = Some(Arc::new(RequestFlow::new(resources)));
+        if !handler.handles_method(request.method) {
+            return None
+        }
+
+        request.flow = Some(Arc::new(RequestFlow::new(self.clone_resources())));
         request.set_path_values(route.values);
         Some(handler.handle(request).await)
     }
 }
 
-#[macro_export]
-macro_rules! router {
-    ($($key:expr => $value:expr)*) => {
-        {
-            use crate::router::func::FunctionRouteHandler;
-            use crate::router::HttpRouter;
-            let mut router = crate::router::Router::new();
-
-            $(
-                router.add_handler($key, Box::new($value.into_route_handler()));
-            )*
-            router
-        }
+impl Router {
+    fn clone_resources(&self) -> ResourceMap {
+        self.resources.values().map(|resource| {
+            (resource.inner_type_id(), resource.clone_box())
+        }).collect()
     }
+}
+
+#[macro_export]
+macro_rules! endpoint {
+    ($fn:path) => {{
+        $crate::paste::paste! {
+            ([<_AltariaEndpoint $fn:upper>]::get_endpoint(), [<_AltariaEndpoint $fn:upper>]::new())
+        }
+    }};
 }

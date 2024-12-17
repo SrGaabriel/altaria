@@ -1,10 +1,10 @@
-use altaria::extractor::param::Param;
 use altaria::extractor::state::Resource;
 use altaria::response::HttpStatusCode;
 use altaria::response::into::IntoResponse;
 use altaria::router::{HttpRouter, Router};
 use altaria::router::func::function_handler;
-use altaria::Server;
+use altaria::{endpoint, Server};
+use altaria_macros::{get, post};
 
 #[tokio::main]
 async fn main() {
@@ -13,10 +13,10 @@ async fn main() {
     });
 
     let router = Router::new()
-        .add_resource("hello!")
+        .add_resource("Altaria")
         .add_handler("/", handler)
-        .add_handler("/meet/{name}", meet)
-        .add_handler("/users/{name}", greet);
+        .add_endpoint(endpoint!(greet))
+        .add_endpoint(endpoint!(meet));
 
     Server::builder()
         .local_port(8080)
@@ -26,15 +26,17 @@ async fn main() {
         .unwrap()
 }
 
+#[post("/greet/{name}")]
 async fn greet(
-    Param(name): Param<String>,
-) -> impl IntoResponse {
+    name: String
+) -> String {
     format!("Hello, {name}")
 }
 
+#[get("/meet/{name}")]
 async fn meet(
-    Param(path): Param<String>,
-    Resource(name): Resource<&str>,
+    name: String,
+    Resource(me): Resource<&str>,
 ) -> impl IntoResponse {
-    format!("I'm, {name}! Hello, {path}")
+    format!("I'm, {me}! Hello, {name}")
 }
