@@ -1,4 +1,3 @@
-#[cfg(feature = "json")]
 use crate::headers;
 use crate::response::{HttpResponse, HttpStatusCode};
 
