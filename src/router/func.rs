@@ -78,6 +78,9 @@ pub fn handle_function_failure(err: ExtractorError) -> HttpResponse {
         ExtractorError::WrongProvidedFormat => {
             (HttpStatusCode::BadRequest, "The provided value could not be parsed").into_response()
         }
+        ExtractorError::BodyParseError => {
+            (HttpStatusCode::BadRequest, "The body of the request could not be parsed").into_response()
+        }
     }
 }
 

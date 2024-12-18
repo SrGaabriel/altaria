@@ -55,7 +55,6 @@ impl<'a> HttpProtocol for BetaHttpProtocol<'a> {
                     continue;
                 }
             };
-            println!("Accepted connection from {}", addr);
 
             let mut parser = self.parser.clone();
             let formatter = self.formatter.clone();

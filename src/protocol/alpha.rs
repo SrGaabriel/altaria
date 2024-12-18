@@ -1,3 +1,4 @@
+use std::panic::AssertUnwindSafe;
 use crate::encoder::alpha::AlphaHttpEncoder;
 use crate::encoder::format::{DefaultHttpResponseFormatter, HttpResponseFormatter};
 use crate::headers;
@@ -8,6 +9,7 @@ use crate::router::{HttpRouter, Router};
 use anyhow::bail;
 use async_trait::async_trait;
 use std::sync::Arc;
+use futures::FutureExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 
@@ -60,14 +62,13 @@ impl HttpProtocol for AlphaHttpProtocol {
         };
 
         loop {
-            let (mut stream, addr) = match socket.accept().await {
+            let (mut stream, _addr) = match socket.accept().await {
                 Ok(connection) => connection,
                 Err(e) => {
                     eprintln!("Failed to accept connection: {}", e);
                     continue;
                 }
             };
-            println!("Accepted connection from {}", addr);
 
             let router = self.router.clone();
             let parser = self.parser.clone();
@@ -83,20 +84,26 @@ impl HttpProtocol for AlphaHttpProtocol {
                     }
                 };
 
-                let routed_response = if let Some(router) = router.as_ref() {
-                    router.route(parsed).await
-                } else {
-                    None
-                };
+                let router = Option::as_ref(&*router).expect("Router not set");
 
+                let routed_response = async { AssertUnwindSafe(router.route(parsed)).catch_unwind().await }.await;
                 let response: HttpResponse = match routed_response {
-                    Some(response) => response,
-                    _ => HttpResponse {
+                    Ok(response) => response.unwrap_or_else(|| HttpResponse {
                         status_code: HttpStatusCode::NotFound,
                         headers: headers! {
-                            ContentType: "text/plain"
-                        },
+                                ContentType: "text/plain"
+                            },
                         body: vec![]
+                    }),
+                    Err(e) => {
+                        eprintln!("Failed to route request: {:?}", e);
+                        HttpResponse {
+                            status_code: HttpStatusCode::InternalServerError,
+                            headers: headers! {
+                                ContentType: "text/plain"
+                            },
+                            body: vec![]
+                        }
                     }
                 };
 

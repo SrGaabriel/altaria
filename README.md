@@ -1,6 +1,18 @@
 # 🌌️ altaria
 
-Altaria is an asynchronous, memory-safe, blazingly fast HTTP server written in Rust. It currently supports HTTP1.1 parsing and encoding and HTTP2 parsing.
+Altaria is an asynchronous, memory-safe, blazingly fast HTTP server written in Rust.
+
+Roadmap:
+- [x] HTTP1.1 protocol
+- [x] HTTP1.1 parsing
+- [x] HTTP1.1 encoding
+- [x] Routing
+- [x] Resources (states)
+- [x] Json
+- [ ] Middlewares
+- [ ] Websockets
+- [ ] HTTP2
+- [ ] TLS
 
 > [!IMPORTANT]  
 > This project is made mostly for educational/learning purposes. It is not recommended to use it in production. Maybe in the future, it will be production-ready.
@@ -13,10 +25,10 @@ async fn main() {
     });
 
     let router = Router::new()
-        .add_resource("Altaria")
+        .add_resource(Arc::new(Mutex::new(State { count: 0 })))
         .add_handler("/", handler)
         .add_endpoint(endpoint!(greet))
-        .add_endpoint(endpoint!(meet));
+        .add_endpoint(endpoint!(count));
 
     Server::builder()
         .local_port(8080)
@@ -33,11 +45,15 @@ async fn greet(
     format!("Hello, {name}")
 }
 
-#[get("/meet/{name}")]
-async fn meet(
-    name: String,
-    Resource(me): Resource<&str>,
-) -> String {
-    format!("I'm, {me}! Hello, {name}")
+#[post("/count")]
+async fn count(
+    Resource(state): Resource<SharedState>,
+    JsonBody(update): JsonBody<CountUpdate>
+) -> JsonBody<CountUpdate> {
+    let mut state = state.lock().await;
+    state.count = update.new_count;
+    JsonBody(CountUpdate {
+        new_count: state.count
+    })
 }
 ```

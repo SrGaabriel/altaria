@@ -1,3 +1,4 @@
+#[cfg(feature = "json")]
 use crate::headers;
 use crate::response::{HttpResponse, HttpStatusCode};
 
@@ -55,6 +56,18 @@ impl<T> IntoResponse for (HttpStatusCode, T) where T : IntoResponse {
             status_code: status,
             headers: response.headers,
             body: response.body
+        }
+    }
+}
+
+impl IntoResponse for Vec<u8> {
+    fn into_response(self) -> HttpResponse {
+        HttpResponse {
+            status_code: HttpStatusCode::OK,
+            headers: headers! {
+                ContentType: "application/octet-stream"
+            },
+            body: self
         }
     }
 }

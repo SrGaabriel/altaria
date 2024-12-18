@@ -99,9 +99,9 @@ impl HttpRouter for Router {
 
 impl Router {
     fn clone_resources(&self) -> ResourceMap {
-        self.resources.values().map(|resource| {
-            (resource.inner_type_id(), resource.clone_box())
-        }).collect()
+        self.resources.iter()
+            .map(|(type_id, resource)| (*type_id, resource.clone_box()))
+            .collect()
     }
 }
 

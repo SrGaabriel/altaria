@@ -12,5 +12,6 @@ pub trait FromRequest {
 pub enum ExtractorError {
     UnregisteredPath,
     WrongProvidedFormat,
-    UnregisteredExtension
+    UnregisteredExtension,
+    BodyParseError
 }
