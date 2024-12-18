@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use crate::parser::HttpParserError;
 use crate::request::{HttpHeader, HttpHeaderMap, HttpMethod, HttpProtocol, HttpRequest, HttpScheme};
 use hpack::Decoder as HpackDecoder;
@@ -26,7 +27,7 @@ impl<'a> BetaHttpParser<'a> {
         }
     }
 
-    pub async fn parse(&mut self, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
+    pub async fn parse(&mut self, addr: SocketAddr, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
         let mut reader = BufReader::new(data);
         let mut connection_preface = vec![0; CONNECTION_PREFACE_LEN];
 
@@ -53,6 +54,7 @@ impl<'a> BetaHttpParser<'a> {
             path,
             headers,
             body,
+            peer_addr: addr,
             flow: None,
             path_values: None
         })

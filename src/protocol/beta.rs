@@ -60,13 +60,13 @@ impl<'a> HttpProtocol for BetaHttpProtocol<'a> {
             let formatter = self.formatter.clone();
             let mut encoder = self.encoder.clone();
             tokio::spawn(async move {
-                match parser.parse(&mut stream).await {
+                match parser.parse(addr, &mut stream).await {
                     Ok(request) => {
                         let response = HttpResponse {
                             status_code: HttpStatusCode::ImATeapot,
                             headers: headers! {
-                    ContentType: "text/plain"
-                },
+                                ContentType: "text/plain"
+                            },
                             body: "Hello, world!".to_string().into_bytes()
                         };
 

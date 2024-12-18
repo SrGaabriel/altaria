@@ -9,6 +9,7 @@ Roadmap:
 - [x] Routing
 - [x] Resources (states)
 - [x] Json
+- [ ] Query parameters
 - [ ] Middlewares
 - [ ] Websockets
 - [ ] HTTP2

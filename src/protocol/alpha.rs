@@ -62,7 +62,7 @@ impl HttpProtocol for AlphaHttpProtocol {
         };
 
         loop {
-            let (mut stream, _addr) = match socket.accept().await {
+            let (mut stream, addr) = match socket.accept().await {
                 Ok(connection) => connection,
                 Err(e) => {
                     eprintln!("Failed to accept connection: {}", e);
@@ -76,7 +76,7 @@ impl HttpProtocol for AlphaHttpProtocol {
             let formatter = self.formatter.clone();
 
             tokio::spawn(async move {
-                let parsed = match parser.parse(&mut stream).await {
+                let parsed = match parser.parse(addr, &mut stream).await {
                     Ok(request) => request,
                     Err(e) => {
                         eprintln!("Failed to parse request: {:?}", e);

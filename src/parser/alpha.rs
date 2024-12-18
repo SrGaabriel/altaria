@@ -2,6 +2,7 @@ use crate::parser::body::read_body_based_on_headers;
 use crate::parser::HttpParserError;
 use crate::request::{HttpHeader, HttpHeaderMap, HttpMethod, HttpProtocol, HttpRequest, HttpScheme};
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
 
@@ -65,7 +66,7 @@ impl AlphaHttpParser {
         Ok(headers)
     }
 
-    pub(crate) async fn parse(&self, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
+    pub(crate) async fn parse(&self, addr: SocketAddr, data: &mut TcpStream) -> Result<HttpRequest, HttpParserError> {
         let mut reader = BufReader::new(data);
         let (method, path) = self.parse_request_line(&mut reader).await?;
         let headers = self.parse_headers(&mut reader).await?;
@@ -78,6 +79,7 @@ impl AlphaHttpParser {
             method,
             headers,
             body,
+            peer_addr: addr,
             flow: None,
             path_values: None
         })

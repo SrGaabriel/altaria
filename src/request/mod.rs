@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use crate::middleware::RequestFlow;
 
@@ -11,6 +12,7 @@ pub struct HttpRequest {
     pub headers: HttpHeaderMap,
     pub body: Vec<u8>,
     pub flow: Option<Arc<RequestFlow>>,
+    pub peer_addr: SocketAddr,
     pub(crate) path_values: Option<HashMap<String, String>>
 }
 
