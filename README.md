@@ -19,6 +19,8 @@ Roadmap:
 > This project is made mostly for educational/learning purposes. It is not recommended to use it in production. Maybe in the future, it will be production-ready.
 
 ```rust
+struct State(usize);
+
 #[tokio::main]
 async fn main() {
     let handler = function_handler(|_| async {
@@ -26,7 +28,7 @@ async fn main() {
     });
 
     let router = Router::new()
-        .add_resource(Arc::new(Mutex::new(State { count: 0 })))
+        .add_resource(Arc::new(Mutex::new(State(0))))
         .add_handler("/", handler)
         .add_endpoint(endpoint!(greet))
         .add_endpoint(endpoint!(count));
