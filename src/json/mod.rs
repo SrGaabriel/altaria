@@ -1,11 +1,9 @@
-pub mod body;
-
-use serde::{Deserialize, Serialize};
 use crate::extractor::{ExtractorError, FromRequest};
 use crate::headers;
-use crate::request::HttpRequest;
-use crate::response::{HttpResponse, HttpStatusCode};
+use crate::request::{ContentType, HttpRequest};
 use crate::response::into::IntoResponse;
+use crate::response::{HttpResponse, HttpStatusCode};
+use serde::{Deserialize, Serialize};
 
 pub struct JsonBody<T>(pub T);
 
@@ -17,6 +15,10 @@ where
     where
         Self: Sized
     {
+        if request.content_type() != Some(ContentType::ApplicationJson) {
+            return Err(ExtractorError::UnexpectedContentType);
+        }
+
         let body = &request.body;
         let value = serde_json::from_slice(&*body).map_err(|_| ExtractorError::BodyParseError)?;
         Ok(JsonBody(value))

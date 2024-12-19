@@ -22,6 +22,7 @@ async fn main() {
     });
 
     let router = Router::new()
+        .add_resource("Altaria")
         .add_resource(Arc::new(Mutex::new(State { count: 0 })))
         .add_handler("/", handler)
         .add_endpoint(endpoint!(greet))
@@ -43,12 +44,16 @@ async fn greet(
     format!("Hello, {name}")
 }
 
-#[get("/meet/{name}")]
+#[get("/meet/{name}?sec={secret}")]
 async fn meet(
     name: String,
+    secret: Option<String>,
     Resource(me): Resource<&str>,
 ) -> String {
-    format!("I'm, {me}! Hello, {name}")
+    match secret {
+        Some(secret) => format!("I'm, {me}! Hello {name}! Your secret is {secret}"),
+        _ => format!("I'm, {me}! Hello, {name}!")
+    }
 }
 
 #[post("/count")]

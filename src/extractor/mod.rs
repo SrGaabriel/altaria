@@ -1,6 +1,7 @@
 pub mod state;
 pub mod param;
 pub mod req;
+pub mod query;
 
 use crate::request::HttpRequest;
 
@@ -11,7 +12,9 @@ pub trait FromRequest {
 #[derive(Debug)]
 pub enum ExtractorError {
     UnregisteredPath,
+    MissingQueryParameter,
     WrongProvidedFormat,
     UnregisteredExtension,
-    BodyParseError
+    BodyParseError,
+    UnexpectedContentType
 }

@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::extractor::{ExtractorError, FromRequest};
 use crate::request::HttpRequest;
 
@@ -9,16 +10,17 @@ impl<T> Param<T> {
     }
 }
 
-impl<T> FromRequest for Param<T> where T : TryFrom<String> {
+impl<T> FromRequest for Param<T> where T : FromStr {
     fn from_request(index: usize, request: &HttpRequest) -> Result<Self, ExtractorError>
     where
         Self: Sized
     {
-        Ok(Param(T::try_from(request
+        Ok(Param(T::from_str(&request
             .path_values
             .as_ref()
             .ok_or::<ExtractorError>(ExtractorError::UnregisteredPath.into())
-            ?.values()
+            ?.params
+            .values()
             .nth(index)
             .ok_or::<ExtractorError>(ExtractorError::UnregisteredPath.into())
             ?.clone()

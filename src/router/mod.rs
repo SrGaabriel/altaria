@@ -92,7 +92,7 @@ impl HttpRouter for Router {
         }
 
         request.flow = Some(Arc::new(RequestFlow::new(self.clone_resources())));
-        request.set_path_values(route.values);
+        request.set_route_path(route.into_path_values());
         Some(handler.handle(request).await)
     }
 }

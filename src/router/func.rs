@@ -80,6 +80,12 @@ pub fn handle_function_failure(err: ExtractorError) -> HttpResponse {
         }
         ExtractorError::BodyParseError => {
             (HttpStatusCode::BadRequest, "The body of the request could not be parsed").into_response()
+        },
+        ExtractorError::UnexpectedContentType => {
+            (HttpStatusCode::BadRequest, "The request did not have the expected content type").into_response()
+        },
+        ExtractorError::MissingQueryParameter => {
+            (HttpStatusCode::BadRequest, "The request did not have the expected query parameter").into_response()
         }
     }
 }

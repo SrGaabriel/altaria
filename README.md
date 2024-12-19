@@ -9,7 +9,7 @@ Roadmap:
 - [x] Routing
 - [x] Resources (states)
 - [x] Json
-- [ ] Query parameters
+- [x] Query parameters
 - [ ] Middlewares
 - [ ] Websockets
 - [ ] HTTP2
@@ -39,11 +39,16 @@ async fn main() {
         .unwrap()
 }
 
-#[post("/greet/{name}")]
-async fn greet(
-    name: String
+#[get("/meet/{name}?sec={secret}")]
+async fn meet(
+    name: String,
+    secret: Option<String>,
+    Resource(me): Resource<&str>,
 ) -> String {
-    format!("Hello, {name}")
+    match secret {
+        Some(secret) => format!("I'm, {me}! Hello {name}! Your secret is {secret}"),
+        _ => format!("I'm, {me}! Hello, {name}!")
+    }
 }
 
 #[post("/count")]

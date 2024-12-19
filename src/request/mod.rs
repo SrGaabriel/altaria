@@ -13,14 +13,21 @@ pub struct HttpRequest {
     pub body: Vec<u8>,
     pub flow: Option<Arc<RequestFlow>>,
     pub peer_addr: SocketAddr,
-    pub(crate) path_values: Option<HashMap<String, String>>
+    pub(crate) path_values: Option<RoutePathValues>
 }
 
 unsafe impl Send for HttpRequest {}
 
 impl HttpRequest {
-    pub(crate) fn set_path_values(&mut self, values: HashMap<String, String>) {
-        self.path_values = Some(values)
+    pub fn content_type(&self) -> Option<ContentType> {
+        match self.headers.get(&HttpHeader::ContentType) {
+            Some(content_type) => Some(ContentType::from_str(content_type)),
+            None => None
+        }
+    }
+
+    pub(crate) fn set_route_path(&mut self, values: RoutePathValues) {
+        self.path_values = Some(values);
     }
 }
 
@@ -246,6 +253,52 @@ impl HttpHeader {
             _ => false
         }
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum ContentType {
+    TextPlain,
+    TextHtml,
+    TextXml,
+    ApplicationJson,
+    ApplicationXml,
+    ApplicationOctetStream,
+    MultipartFormData,
+    Custom(String)
+}
+
+impl ContentType {
+    pub fn from_str(content_type: &str) -> ContentType {
+        match content_type {
+            "text/plain" => ContentType::TextPlain,
+            "text/html" => ContentType::TextHtml,
+            "text/xml" => ContentType::TextXml,
+            "application/json" => ContentType::ApplicationJson,
+            "application/xml" => ContentType::ApplicationXml,
+            "application/octet-stream" => ContentType::ApplicationOctetStream,
+            "multipart/form-data" => ContentType::MultipartFormData,
+            _ => ContentType::Custom(content_type.to_string())
+        }
+    }
+
+    pub fn to_str(&self) -> String {
+        match self {
+            ContentType::TextPlain => "text/plain".to_string(),
+            ContentType::TextHtml => "text/html".to_string(),
+            ContentType::TextXml => "text/xml".to_string(),
+            ContentType::ApplicationJson => "application/json".to_string(),
+            ContentType::ApplicationXml => "application/xml".to_string(),
+            ContentType::ApplicationOctetStream => "application/octet-stream".to_string(),
+            ContentType::MultipartFormData => "multipart/form-data".to_string(),
+            ContentType::Custom(content_type) => content_type.to_string()
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RoutePathValues {
+    pub params: HashMap<String, String>,
+    pub queries: HashMap<String, String>
 }
 
 #[macro_export]

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
+use crate::request::RoutePathValues;
 use crate::router::handler::RouteHandler;
 
 pub struct RouteNode {
@@ -39,15 +40,30 @@ impl RouteNode {
     }
 
     pub fn find(&self, path: &str) -> Option<RouteHandlerPath> {
-        let segments: Vec<&str> = separate_path_segments(path);
+        let mut segments: Vec<&str> = separate_path_segments(path);
         let mut current = self;
-        let mut values: HashMap<String, String> = HashMap::new();
+        let mut params: HashMap<String, String> = HashMap::new();
+        let last_path = *segments.last().unwrap();
+        let mut queries = HashMap::new();
+        if let Some(index) = last_path.find('?') {
+            let (path, query) = last_path.split_at(index);
+            segments.pop();
+            segments.push(path);
+            if index != last_path.len() - 1 {
+                for query in query[1..].split('&') {
+                    let mut parts = query.split('=');
+                    let key = parts.next().unwrap();
+                    let value = parts.next().unwrap();
+                    queries.insert(key.to_string(), value.to_string());
+                }
+            }
+        }
 
         for segment in segments {
             if let Some(child) = current.children.get(segment) {
                 current = child;
             } else if let Some(dynamic) = &current.dynamic_child {
-                values.insert(
+                params.insert(
                     dynamic.dynamic_id.clone().expect("Dynamic child doesn't have a dynamic id"),
                     segment.to_string()
                 );
@@ -56,9 +72,11 @@ impl RouteNode {
                 return None
             }
         }
+
         current.handler.as_ref().map(move |handler| RouteHandlerPath {
             handler,
-            values
+            params,
+            queries
         })
     }
 }
@@ -67,9 +85,20 @@ fn separate_path_segments(path: &str) -> Vec<&str> {
     path.split('/').filter(|s| !s.is_empty()).collect()
 }
 
-pub struct RouteHandlerPath<'a> {
+#[derive(Clone)]
+pub(crate) struct RouteHandlerPath<'a> {
     pub handler: &'a Box<dyn RouteHandler + Send + Sync>,
-    pub values: HashMap<String, String>
+    pub params: HashMap<String, String>,
+    pub queries: HashMap<String, String>,
+}
+
+impl RouteHandlerPath<'_> {
+    pub(crate) fn into_path_values(self) -> RoutePathValues {
+        RoutePathValues {
+            params: self.params,
+            queries: self.queries,
+        }
+    }
 }
 
 impl Debug for RouteNode {
@@ -78,6 +107,15 @@ impl Debug for RouteNode {
             .field("dynamic_child", &self.dynamic_child)
             .field("dynamic_id", &self.dynamic_id)
             .field("children", &self.children)
+            .finish()
+    }
+}
+
+impl Debug for RouteHandlerPath<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RouteHandlerPath")
+            .field("params", &self.params)
+            .field("queries", &self.queries)
             .finish()
     }
 }
