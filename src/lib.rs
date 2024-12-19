@@ -31,11 +31,11 @@ impl HttpServer {
         }
     }
 
-    pub fn http2() -> HttpServer {
-        HttpServer {
-            protocol: Box::new(protocol::beta::BetaHttpProtocol::new())
-        }
-    }
+    // pub fn http2() -> HttpServer {
+    //     HttpServer {
+    //         protocol: Box::new(protocol::beta::BetaHttpProtocol::new())
+    //     }
+    // }
 
     pub fn set_router(&mut self, router: Router) {
         self.protocol.set_router(router)

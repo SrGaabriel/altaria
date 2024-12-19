@@ -1,5 +1,6 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use async_trait::async_trait;
 use crate::extractor::{ExtractorError, FromRequest};
 use crate::request::HttpRequest;
 
@@ -11,8 +12,9 @@ impl<T> Resource<T> {
     }
 }
 
+#[async_trait]
 impl<T> FromRequest for Resource<T> where T : Clone + Send + Sync + 'static {
-    fn from_request(_index: usize, request: &HttpRequest) -> Result<Self, ExtractorError>
+    async fn from_request(_index: usize, request: &mut HttpRequest) -> Result<Self, ExtractorError>
     where
         Self: Sized
     {

@@ -3,10 +3,12 @@ pub mod param;
 pub mod req;
 pub mod query;
 
+use async_trait::async_trait;
 use crate::request::HttpRequest;
 
+#[async_trait]
 pub trait FromRequest {
-    fn from_request(index: usize, request: &HttpRequest) -> Result<Self, ExtractorError> where Self : Sized;
+    async fn from_request(index: usize, request: &mut HttpRequest) -> Result<Self, ExtractorError> where Self : Sized;
 }
 
 #[derive(Debug)]

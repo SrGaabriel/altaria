@@ -129,8 +129,8 @@ where
     R : IntoResponse + Send + 'static,
     E1 : FromRequest + Send
 {
-    async fn handle_request(&self, request: HttpRequest) -> HttpResponse {
-        match E1::from_request(0, &request) {
+    async fn handle_request(&self, mut request: HttpRequest) -> HttpResponse {
+        match E1::from_request(0, &mut request).await {
             Ok(e1value) => self(e1value).await.into_response(),
             Err(err) => handle_function_failure(err)
         }
@@ -147,14 +147,14 @@ where
     E1 : FromRequest + Send,
     E2 : FromRequest + Send,
 {
-    async fn handle_request(&self, request: HttpRequest) -> HttpResponse {
-        let extract_values = || -> Result<(E1, E2), ExtractorError> {
-            let e1value = E1::from_request(0, &request)?;
-            let e2value = E2::from_request(1, &request)?;
-            Ok((e1value, e2value))
-        };
+    async fn handle_request(&self, mut request: HttpRequest) -> HttpResponse {
+        let extract_values = async {
+            let e1value = E1::from_request(0, &mut request).await?;
+            let e2value = E2::from_request(1, &mut request).await?;
+            Result::<_, ExtractorError>::Ok((e1value, e2value))
+        }.await;
 
-        match extract_values() {
+        match extract_values {
             Ok((e1value, e2value)) => self(e1value, e2value).await.into_response(),
             Err(err) => handle_function_failure(err)
         }
@@ -172,15 +172,15 @@ where
     E2 : FromRequest + Send,
     E3 : FromRequest + Send,
 {
-    async fn handle_request(&self, request: HttpRequest) -> HttpResponse {
-        let extract_values = || -> Result<(E1, E2, E3), ExtractorError> {
-            let e1value = E1::from_request(0, &request)?;
-            let e2value = E2::from_request(1, &request)?;
-            let e3value = E3::from_request(2, &request)?;
-            Ok((e1value, e2value, e3value))
-        };
+    async fn handle_request(&self, mut request: HttpRequest) -> HttpResponse {
+        let extract_values = async {
+            let e1value = E1::from_request(0, &mut request).await?;
+            let e2value = E2::from_request(1, &mut request).await?;
+            let e3value = E3::from_request(2, &mut request).await?;
+            Result::<_, ExtractorError>::Ok((e1value, e2value, e3value))
+        }.await;
 
-        match extract_values() {
+        match extract_values {
             Ok((e1value, e2value, e3value)) => self(e1value, e2value, e3value).await.into_response(),
             Err(err) => handle_function_failure(err)
         }

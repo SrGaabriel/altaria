@@ -1,6 +1,7 @@
 use crate::extractor::{ExtractorError, FromRequest};
 use crate::request::HttpRequest;
 use std::str::FromStr;
+use async_trait::async_trait;
 
 pub struct Query<T>(pub T);
 pub struct OptionalQuery<T>(pub Option<T>);
@@ -39,9 +40,10 @@ impl<T> NamedExtractor for OptionalQuery<T> where T : FromStr {
     }
 }
 
+#[async_trait]
 impl<T> FromRequest for Query<T>
 where T : FromStr {
-    fn from_request(index: usize, request: &HttpRequest) -> Result<Self, ExtractorError>
+    async fn from_request(index: usize, request: &mut HttpRequest) -> Result<Self, ExtractorError>
     where
         Self: Sized
     {

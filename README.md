@@ -28,6 +28,7 @@ async fn main() {
     });
 
     let router = Router::new()
+        .add_resource("Altaria")
         .add_resource(Arc::new(Mutex::new(State(0))))
         .add_handler("/", handler)
         .add_endpoint(endpoint!(greet))

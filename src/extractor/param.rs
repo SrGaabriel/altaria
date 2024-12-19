@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use async_trait::async_trait;
 use crate::extractor::{ExtractorError, FromRequest};
 use crate::request::HttpRequest;
 
@@ -10,8 +11,9 @@ impl<T> Param<T> {
     }
 }
 
+#[async_trait]
 impl<T> FromRequest for Param<T> where T : FromStr {
-    fn from_request(index: usize, request: &HttpRequest) -> Result<Self, ExtractorError>
+    async fn from_request(index: usize, request: &mut HttpRequest) -> Result<Self, ExtractorError>
     where
         Self: Sized
     {

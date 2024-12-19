@@ -2,23 +2,28 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use crate::middleware::RequestFlow;
+use crate::parser::body::LazyBodyReader;
 
-#[derive(Clone)]
 pub struct HttpRequest {
     pub protocol: HttpProtocol,
     pub scheme: HttpScheme,
     pub path: String,
     pub method: HttpMethod,
     pub headers: HttpHeaderMap,
-    pub body: Vec<u8>,
     pub flow: Option<Arc<RequestFlow>>,
     pub peer_addr: SocketAddr,
+    pub content_length: usize,
+    pub body_reader: LazyBodyReader,
     pub(crate) path_values: Option<RoutePathValues>
 }
 
 unsafe impl Send for HttpRequest {}
 
 impl HttpRequest {
+    pub async fn read_body(&mut self) -> &[u8] {
+        self.body_reader.read_all().await
+    }
+
     pub fn content_type(&self) -> Option<ContentType> {
         match self.headers.get(&HttpHeader::ContentType) {
             Some(content_type) => Some(ContentType::from_str(content_type)),

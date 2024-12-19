@@ -81,10 +81,10 @@ fn expand(
     let query_params: HashMap<String, String> = query_part.split('&')
         .map(|s| s.split('=').collect::<Vec<&str>>())
         .filter(|s| s.len() == 2)
+        .filter(|s| !s[0].is_empty() && !s[1].is_empty())
         .map(|s| (s[0].to_string(), s[1].to_string()))
-        .filter(|(key, value)| value.starts_with('{') && value.ends_with('}'))
-        .map(|(key, value)| (key, value[1..value.len() - 1].to_string()))
-        .map(|(key, value)| (value, key))
+        .filter(|(_, value)| value.starts_with('{') && value.ends_with('}'))
+        .map(|(key, value)| (value[1..value.len() - 1].to_string(), key)) // <- flip
         .collect();
 
     let mut inputs: Vec<_> = function_item.sig.inputs.iter().cloned().collect();
@@ -118,7 +118,7 @@ fn expand(
                         idents.push(variable_ident.clone());
                         extractors.push(extractor.clone());
                         extractions.push(quote! {
-                            let #variable_ident = #extractor::from_request(#index, &request)?;
+                            let #variable_ident = #extractor::from_request(#index, &mut request).await?;
                         });
                         continue;
                     } else if query_params.contains_key(&name) {
@@ -147,7 +147,7 @@ fn expand(
                 idents.push(variable_ident.clone());
                 extractors.push(extractor.clone());
                 extractions.push(quote! {
-                    let #variable_ident = #extractor::from_request(#index, &request)?;
+                    let #variable_ident = #extractor::from_request(#index, &mut request).await?;
                 });
             } else {
                 panic!("Invalid function argument: it's either not a simple identifier or not a type");
@@ -184,15 +184,15 @@ fn expand(
                 #method
             }
 
-            async fn handle_request(&self, request: altaria::request::HttpRequest) -> altaria::response::HttpResponse {
-                let extract_values = || -> Result<(#(#extractors),*), altaria::extractor::ExtractorError> {
+            async fn handle_request(&self, mut request: altaria::request::HttpRequest) -> altaria::response::HttpResponse {
+                let extract_values = async {
                     use altaria::extractor::FromRequest;
                     use altaria::extractor::query::NamedExtractor;
                     #(#extractions)*
-                    Ok((#(#idents),*))
-                };
+                    Result::<_, altaria::extractor::ExtractorError>::Ok((#(#idents),*))
+                }.await;
 
-                match extract_values() {
+                match extract_values {
                     Ok((#(#idents),*)) => {
                         let response = #function_ident(#(#accesses),*).await;
                         response.into_response()
@@ -204,41 +204,6 @@ fn expand(
 
         #function_item
     })
-}
-
-#[proc_macro_attribute]
-pub fn deprecated_handler_fix(_args: TokenStream, item: TokenStream) -> TokenStream {
-    let mut function_item = parse_macro_input!(item as syn::ItemFn);
-    sort_parameters(&mut function_item);
-
-    TokenStream::from(quote!(#function_item))
-}
-
-fn is_target_type(type_path: &syn::TypePath, target: &str) -> bool {
-    type_path.path.segments.last().map_or(false, |segment| {
-        segment.ident == target
-    })
-}
-
-fn get_type_priority(arg: &syn::FnArg) -> u8 {
-    match arg {
-        syn::FnArg::Typed(pat_type) => {
-            if let syn::Type::Path(type_path) = &*pat_type.ty {
-                if is_target_type(type_path, "Param") {
-                    return 0
-                }
-            }
-        },
-        _ => {}
-    }
-    1
-}
-
-fn sort_parameters(function_item: &mut syn::ItemFn) {
-    let mut inputs: Vec<_> = function_item.sig.inputs.iter().cloned().collect();
-    inputs.sort_by_key(|arg| get_type_priority(arg));
-
-    function_item.sig.inputs = syn::punctuated::Punctuated::from_iter(inputs);
 }
 
 fn extract_option_type_param(type_path: &syn::TypePath) -> Option<syn::Type> {
