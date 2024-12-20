@@ -1,5 +1,6 @@
 pub mod into;
 
+use std::fmt::Display;
 use crate::request::HttpHeaderMap;
 
 #[derive(Debug, Clone)]
@@ -186,5 +187,11 @@ impl HttpStatusCode {
             HttpStatusCode::NetworkAuthenticationRequired => true,
             _ => false
         }
+    }
+}
+
+impl Display for HttpStatusCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {:?}", self.code(), self)
     }
 }

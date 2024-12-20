@@ -7,6 +7,7 @@ use altaria::router::{HttpRouter, Router};
 use altaria::router::func::function_handler;
 use altaria::{endpoint, Server};
 use altaria::json::JsonBody;
+use altaria::middleware::log::{LogLevel, LoggingMiddleware};
 use altaria_macros::{get, post};
 
 pub struct State {
@@ -27,7 +28,8 @@ async fn main() {
         .add_handler("/", handler)
         .add_endpoint(endpoint!(greet))
         .add_endpoint(endpoint!(meet))
-        .add_endpoint(endpoint!(count));
+        .add_endpoint(endpoint!(count))
+        .add_middleware(LoggingMiddleware::subscribing(LogLevel::DEBUG));
 
     Server::builder()
         .local_port(8080)

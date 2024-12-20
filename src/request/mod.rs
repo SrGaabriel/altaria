@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use crate::middleware::RequestFlow;
+use tokio::sync::OnceCell;
+use crate::router::flow::RequestFlow;
 use crate::parser::body::LazyBodyReader;
 
 pub struct HttpRequest {
@@ -10,11 +12,11 @@ pub struct HttpRequest {
     pub path: String,
     pub method: HttpMethod,
     pub headers: HttpHeaderMap,
-    pub flow: Option<Arc<RequestFlow>>,
+    pub flow: OnceCell<Arc<RequestFlow>>,
     pub peer_addr: SocketAddr,
     pub content_length: usize,
     pub body_reader: LazyBodyReader,
-    pub(crate) path_values: Option<RoutePathValues>
+    pub(crate) path_values: OnceCell<RoutePathValues>
 }
 
 unsafe impl Send for HttpRequest {}
@@ -32,7 +34,14 @@ impl HttpRequest {
     }
 
     pub(crate) fn set_route_path(&mut self, values: RoutePathValues) {
-        self.path_values = Some(values);
+        self.path_values.set(values).unwrap();
+    }
+
+    pub(crate) fn set_flow(&mut self, flow: Arc<RequestFlow>) {
+        let result = self.flow.set(flow);
+        if let Err(_) = result {
+            panic!("Flow already set for request");
+        }
     }
 }
 
@@ -304,6 +313,21 @@ impl ContentType {
 pub struct RoutePathValues {
     pub params: HashMap<String, String>,
     pub queries: HashMap<String, String>
+}
+
+impl Display for HttpMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            HttpMethod::GET => "GET",
+            HttpMethod::POST => "POST",
+            HttpMethod::PUT => "PUT",
+            HttpMethod::DELETE => "DELETE",
+            HttpMethod::OPTIONS => "OPTIONS",
+            HttpMethod::HEAD => "HEAD",
+            HttpMethod::PATCH => "PATCH",
+            HttpMethod::TRACE => "TRACE"
+        })
+    }
 }
 
 #[macro_export]

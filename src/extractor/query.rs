@@ -20,7 +20,7 @@ pub trait NamedExtractor {
 
 impl<T: FromStr> NamedExtractor for Query<T> {
     fn from_request_by_name(name: &str, request: &HttpRequest) -> Result<Self, ExtractorError> {
-        let query_value = request.path_values.as_ref().unwrap().queries.get(name);
+        let query_value = request.path_values.get().unwrap().queries.get(name);
 
         match query_value {
             Some(value) => Ok(Query(T::from_str(value).map_err(|_| ExtractorError::WrongProvidedFormat)?)),
@@ -31,7 +31,7 @@ impl<T: FromStr> NamedExtractor for Query<T> {
 
 impl<T> NamedExtractor for OptionalQuery<T> where T : FromStr {
     fn from_request_by_name(name: &str, request: &HttpRequest) -> Result<Self, ExtractorError> {
-        let query_value = request.path_values.as_ref().unwrap().queries.get(name);
+        let query_value = request.path_values.get().unwrap().queries.get(name);
 
         match query_value {
             Some(value) => Ok(OptionalQuery(Some(T::from_str(value).map_err(|_| ExtractorError::WrongProvidedFormat)?))),
@@ -49,7 +49,7 @@ where T : FromStr {
     {
         let path_values = request
             .path_values
-            .as_ref()
+            .get()
             .unwrap();
         Ok(Query(T::from_str(&path_values
             .queries

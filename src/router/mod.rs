@@ -1,9 +1,10 @@
 pub mod handler;
 mod tree;
 pub mod func;
+pub mod flow;
 
 use crate::extractor::state::{Resource, ResourceMap};
-use crate::middleware::RequestFlow;
+use crate::router::flow::RequestFlow;
 use crate::request::HttpRequest;
 use crate::response::HttpResponse;
 use crate::router::func::FunctionRouteHandler;
@@ -13,6 +14,7 @@ use async_trait::async_trait;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::middleware::{Middleware, MiddlewareChain};
 
 #[async_trait]
 pub trait HttpRouter {
@@ -31,19 +33,24 @@ pub trait HttpRouter {
         Ext: Send + Sync + 'static,
         Handler: FunctionRouteHandler<Ext> + Sized + Send + 'static;
 
+    fn add_middleware<M>(self, middleware: M) -> Self where
+        M: Middleware + Send + Sync + 'static;
+
     async fn route(&self, request: HttpRequest) -> Option<HttpResponse>;
 }
 
 pub struct Router {
     root: RouteNode,
-    resources: ResourceMap
+    resources: ResourceMap,
+    middlewares: MiddlewareChain
 }
 
 impl Router {
     pub fn new() -> Self {
         Router {
             root: RouteNode::new(),
-            resources: HashMap::new()
+            resources: HashMap::new(),
+            middlewares: MiddlewareChain::new()
         }
     }
 }
@@ -84,16 +91,29 @@ impl HttpRouter for Router {
         self.add_handler(endpoint.0, endpoint.1)
     }
 
+    fn add_middleware<M>(mut self, middleware: M) -> Self
+    where
+        M: Middleware + Send + Sync + 'static,
+    {
+        self.middlewares.add_middleware(middleware);
+        self
+    }
+
     async fn route(&self, mut request: HttpRequest) -> Option<HttpResponse> {
         let route = self.root.find(&request.path)?;
         let handler = route.handler;
         if !handler.handles_method(request.method) {
             return None
         }
+        let flow = Arc::new(RequestFlow::new(self.clone_resources()));
+        request.set_flow(flow.clone());
+        self.middlewares.apply_before(&mut request);
 
-        request.flow = Some(Arc::new(RequestFlow::new(self.clone_resources())));
         request.set_route_path(route.into_path_values());
-        Some(handler.handle(request).await)
+        let mut response = handler.handle(request).await;
+
+        self.middlewares.apply_after(flow, &mut response);
+        Some(response)
     }
 }
 

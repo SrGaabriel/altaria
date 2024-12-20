@@ -18,7 +18,7 @@ impl<T> FromRequest for Resource<T> where T : Clone + Send + Sync + 'static {
     where
         Self: Sized
     {
-        let resources = request.flow.as_ref().unwrap().get_resource::<T>()
+        let resources = request.flow.get().unwrap().get_resource::<T>()
             .ok_or(ExtractorError::UnregisteredExtension)?;
         Ok(Self(resources.clone()))
     }

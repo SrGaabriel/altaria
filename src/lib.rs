@@ -8,7 +8,7 @@ pub mod response;
 mod protocol;
 pub mod router;
 pub mod extractor;
-mod middleware;
+pub mod middleware;
 #[cfg(feature = "json")]
 pub mod json;
 mod util;

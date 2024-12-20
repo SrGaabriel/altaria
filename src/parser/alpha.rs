@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::tcp::OwnedReadHalf;
+use tokio::sync::OnceCell;
 
 const INITIAL_BUFFER_SIZE: usize = 8192;
 const MAX_HEADER_SIZE: usize = 8192;
@@ -99,8 +100,8 @@ impl AlphaHttpParser {
             body_reader,
             content_length,
             peer_addr: addr,
-            flow: None,
-            path_values: None,
+            flow: OnceCell::new(),
+            path_values: OnceCell::new(),
         })
     }
 }

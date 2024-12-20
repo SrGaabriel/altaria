@@ -10,7 +10,7 @@ Roadmap:
 - [x] Resources (states)
 - [x] Json
 - [x] Query parameters
-- [ ] Middlewares
+- [x] Middlewares
 - [ ] Websockets
 - [ ] HTTP2
 - [ ] TLS

@@ -14,8 +14,7 @@ where
         for<'a> T: Deserialize<'a>
 {
     async fn from_request(_index: usize, request: &mut HttpRequest) -> Result<Self, ExtractorError>
-    where
-        Self: Sized {
+    where Self: Sized {
         if request.content_type() != Some(ContentType::ApplicationJson) {
             return Err(ExtractorError::UnexpectedContentType);
         }

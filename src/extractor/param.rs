@@ -19,7 +19,7 @@ impl<T> FromRequest for Param<T> where T : FromStr {
     {
         Ok(Param(T::from_str(&request
             .path_values
-            .as_ref()
+            .get()
             .ok_or::<ExtractorError>(ExtractorError::UnregisteredPath.into())
             ?.params
             .values()

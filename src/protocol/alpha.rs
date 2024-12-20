@@ -75,6 +75,7 @@ impl HttpProtocol for AlphaHttpProtocol {
             let formatter = self.formatter.clone();
 
             tokio::spawn(async move {
+                let start_time = std::time::Instant::now();
                 let (read_half, mut write_half) = stream.into_split();
                 let parsed = match parser.parse(addr, read_half).await {
                     Ok(request) => request,
@@ -125,6 +126,8 @@ impl HttpProtocol for AlphaHttpProtocol {
                     eprintln!("Failed to flush response: {}", e);
                     return;
                 }
+                #[cfg(feature = "logging")]
+                tracing::debug!("Request from {} took {:?}", addr, start_time.elapsed());
             });
         }
     }
