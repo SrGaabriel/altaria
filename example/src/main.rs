@@ -8,7 +8,7 @@ use altaria::router::func::function_handler;
 use altaria::{endpoint, Server};
 use altaria::json::JsonBody;
 use altaria::middleware::log::{LogLevel, LoggingMiddleware};
-use altaria_macros::{get, post};
+use altaria::router::macros::altaria_macros::{get, post};
 
 pub struct State {
     pub count: u32
@@ -16,7 +16,7 @@ pub struct State {
 
 type SharedState = Arc<Mutex<State>>;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     let handler = function_handler(|_| async {
         (HttpStatusCode::OK, "Hello, World!")

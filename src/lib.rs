@@ -1,5 +1,3 @@
-pub extern crate async_trait;
-pub extern crate paste;
 
 mod parser;
 pub mod request;

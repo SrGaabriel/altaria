@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 altaria={ path = "../", features = ["json", "logging"] }
-altaria-macros = { path = "../macros" }
 
 tokio={ version = "1.42.0", features = ["full"] }
 serde = { version = "1.0.216", features = ["derive"]}

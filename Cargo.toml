@@ -22,6 +22,10 @@ serde_json = { version = "1.0.74", optional = true, default-features = false }
 tracing = { version = "0.1.41", optional = true }
 tracing-subscriber = { version = "0.3.19", optional = true }
 
+altaria-macros = { path = "macros", optional = true }
+
 [features]
+default = ["macros"]
+macros = ["altaria-macros"]
 json = ["serde", "serde_json"]
 logging = ["tracing", "tracing-subscriber"]

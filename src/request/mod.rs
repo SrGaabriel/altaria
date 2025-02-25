@@ -82,17 +82,17 @@ pub enum HttpMethod {
 }
 
 impl HttpMethod {
-    pub fn from_str(method: &str) -> HttpMethod {
+    pub fn from_str(method: &str) -> Option<HttpMethod> {
         match method {
-            "GET" => HttpMethod::GET,
-            "POST" => HttpMethod::POST,
-            "PUT" => HttpMethod::PUT,
-            "DELETE" => HttpMethod::DELETE,
-            "OPTIONS" => HttpMethod::OPTIONS,
-            "HEAD" => HttpMethod::HEAD,
-            "PATCH" => HttpMethod::PATCH,
-            "TRACE" => HttpMethod::TRACE,
-            _ => HttpMethod::GET
+            "GET" => Some(HttpMethod::GET),
+            "POST" => Some(HttpMethod::POST),
+            "PUT" => Some(HttpMethod::PUT),
+            "DELETE" => Some(HttpMethod::DELETE),
+            "OPTIONS" => Some(HttpMethod::OPTIONS),
+            "HEAD" => Some(HttpMethod::HEAD),
+            "PATCH" => Some(HttpMethod::PATCH),
+            "TRACE" => Some(HttpMethod::TRACE),
+            _ => None
         }
     }
 }

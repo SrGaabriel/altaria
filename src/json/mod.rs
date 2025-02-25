@@ -20,7 +20,7 @@ where
         }
 
         let body = request.read_body().await;
-        let value = serde_json::from_slice(&*body).map_err(|_| ExtractorError::BodyParseError)?;
+        let value = serde_json::from_slice(&*body).map_err(|err| ExtractorError::BodyParseError )?;
         Ok(JsonBody(value))
     }
 }

@@ -2,6 +2,8 @@ pub mod handler;
 mod tree;
 pub mod func;
 pub mod flow;
+#[cfg(feature = "macros")]
+pub mod macros;
 
 use crate::extractor::state::{Resource, ResourceMap};
 use crate::router::flow::RequestFlow;
@@ -123,13 +125,4 @@ impl Router {
             .map(|(type_id, resource)| (*type_id, resource.clone_box()))
             .collect()
     }
-}
-
-#[macro_export]
-macro_rules! endpoint {
-    ($fn:path) => {{
-        $crate::paste::paste! {
-            ([<_AltariaEndpoint $fn:upper>]::get_endpoint(), [<_AltariaEndpoint $fn:upper>]::new())
-        }
-    }};
 }

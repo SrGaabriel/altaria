@@ -7,7 +7,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::tcp::OwnedReadHalf;
 use tokio::sync::OnceCell;
 
-const INITIAL_BUFFER_SIZE: usize = 8192;
+const INITIAL_BUFFER_SIZE: usize = 4096;
 const MAX_HEADER_SIZE: usize = 8192;
 
 pub struct AlphaHttpParser {
@@ -33,8 +33,8 @@ impl AlphaHttpParser {
         let mut line = Vec::with_capacity(INITIAL_BUFFER_SIZE);
         let bytes_read = reader.read_until(b'\n', &mut line).await.map_err(|_| HttpParserError::RequestLine)?;
 
-        if bytes_read == 0 {
-            return Err(HttpParserError::RequestLine);
+        if bytes_read < 5 {
+            return Err(HttpParserError::InvalidRequestLine);
         }
 
         let line_str = match std::str::from_utf8(&line) {

@@ -178,7 +178,7 @@ fn expand(
             }
         }
 
-        #[altaria::async_trait::async_trait]
+        #[altaria::router::macros::async_trait::async_trait]
         impl altaria::router::func::FunctionRouteHandler<(#(#extractors),*)> for #const_ident {
             fn get_method(&self) -> Option<altaria::request::HttpMethod> {
                 #method

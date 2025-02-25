@@ -69,6 +69,10 @@ impl HttpProtocol for AlphaHttpProtocol {
                     continue;
                 }
             };
+            if let Err(err) = stream.set_nodelay(true) {
+                #[cfg(feature = "logging")]
+                tracing::warn!("Failed to set TCP_NODELAY: {}", err);
+            }
             let router = self.router.clone();
             let parser = self.parser.clone();
             let encoder = self.encoder.clone();
